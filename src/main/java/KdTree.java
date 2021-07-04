@@ -2,6 +2,7 @@
 import edu.princeton.cs.algs4.*;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 
 
 public class KdTree {
@@ -9,7 +10,14 @@ public class KdTree {
     private Queue<Node> q = new Queue<>();
     private Queue<Point2D> pq = new Queue<>();
     private ArrayList<Point2D> points = new ArrayList<>();
-    private Stack<Node> intersectingNodes = new Stack<>();
+    private MinPQ<Point2D> intersectingNodes = new MinPQ<>(new Comparator<Point2D>() {
+        @Override
+        public int compare(Point2D o1, Point2D o2) {
+            if (o1.y() >= o2.y()) return 1;
+            else if (o1.y() < o2.y()) return -1;
+            else return 0;
+        }
+    });
     private RectHV rHl = null;
     private RectHV rHr = null;
 
@@ -157,7 +165,8 @@ public class KdTree {
         double rectXmax = rect.xmax();
         double rectYmin = rect.ymin();
         double rectYmax = rect.ymax();
-        for (Node node : range(root, rect)) {  // make sure the smallest rec is comning in first; if not, fix it
+        for (Object o : range(root, rect)) {  // make sure the smallest rec is comning in first; if not, fix it
+            Node node = (Node) o;
             while (xminCounter > rectXmin && xmaxCounter < rectXmax && yminCounter > rectYmin && ymaxCounter < rectYmax) {
                 xminCounter = node.nodeRect.xmin();
                 xmaxCounter = node.nodeRect.xmax();
@@ -168,12 +177,12 @@ public class KdTree {
 
                 }
             }
-            // I need a switch statement
+
         }
         return points;
     }
 
-    private Iterable<Node> range(Node h, RectHV rect) {
+    private Iterable<Point2D> range(Node h, RectHV rect) {
         // for (double i = 0.0;i<1.0;i+=0.1){
         // if (h.nodeRect.xmin()<=i){
         // Problem - I can not use any other BST and I am using this one to store points
@@ -197,74 +206,80 @@ public class KdTree {
             // now create rHl
             if (!h.coordinate) {  // horizontal scenario
 
-                if (h.parent == null) {
+                ///if (h.parent == null) {
+                // rHl = new RectHV(h.nodeRect.xmin(), h.nodeRect.ymin(), h.p.x(), h.nodeRect.ymax());
+                /* replaced point x coordinate with cached value  */
+                //rHl = new RectHV(h.nodeRect.xmin(), h.nodeRect.ymin(), x, h.nodeRect.ymax());
+                // rHr = new RectHV(h.p.x(), h.nodeRect.ymin(), h.nodeRect.xmax(), h.nodeRect.ymax());
+                //rHr = new RectHV(x, h.nodeRect.ymin(), h.nodeRect.xmax(), h.nodeRect.ymax());
+                //} else {
+                if (h.left != null && h.nodeRect.xmin() < h.left.maximumX) {
                     // rHl = new RectHV(h.nodeRect.xmin(), h.nodeRect.ymin(), h.p.x(), h.nodeRect.ymax());
-                    /* replaced point x coordinate with cached value  */
                     rHl = new RectHV(h.nodeRect.xmin(), h.nodeRect.ymin(), x, h.nodeRect.ymax());
+                    h.left.parent = h;
+                    h.left.nodeRect = rHl;
+                    intersectingNodes.insert(h.p);
+
+                }
+                if (h.right != null) {
                     // rHr = new RectHV(h.p.x(), h.nodeRect.ymin(), h.nodeRect.xmax(), h.nodeRect.ymax());
                     rHr = new RectHV(x, h.nodeRect.ymin(), h.nodeRect.xmax(), h.nodeRect.ymax());
+                    h.right.parent = h;
+                    h.right.nodeRect = rHr;
+                    intersectingNodes.insert(h.p);
+
                 } else {
-                    if (h.left != null && h.nodeRect.xmin() < h.left.maximumX) {
-                        // rHl = new RectHV(h.nodeRect.xmin(), h.nodeRect.ymin(), h.p.x(), h.nodeRect.ymax());
-                        rHl = new RectHV(h.nodeRect.xmin(), h.nodeRect.ymin(), x, h.nodeRect.ymax());
-                        h.left.parent = h;
-                        h.left.nodeRect = rHl;
-                        range(h.left, rect);
+                    if (rect.contains(h.p) && (!points.contains(h.p))) {
+                        points.add(h.p);
                     }
-                    if (h.right != null && h.nodeRect.xmax() > h.right.maximumX) {
-                        // rHr = new RectHV(h.p.x(), h.nodeRect.ymin(), h.nodeRect.xmax(), h.nodeRect.ymax());
-                        rHr = new RectHV(x, h.nodeRect.ymin(), h.nodeRect.xmax(), h.nodeRect.ymax());
-                        h.right.parent = h;
-                        h.right.nodeRect = rHr;
-                        range(h.right, rect);
-                    }
+                }
+                if (h.left != null) {
+                    range(h.left, rect);
+                    // if you run into nodes with null rectangle in points, you may have to set h.nodeRect to rHl here
                 }
 
-                if (rHl.intersects(rect) && h.left != null) {
-                    h.left.nodeRect = rHl;
-                    intersectingNodes.push(h.left);
-                }
-                if (rHr.intersects(rect) && h.right != null) {
-                    h.right.nodeRect = rHr;
-                    intersectingNodes.push(h.right);
+                if (h.right != null) {
+                    range(h.right, rect);
+                    /* if you run into nodes with null rectangle in points, you may have to set h.nodeRect to hHr here */
                 }
             }
             if (h.coordinate) {  // If h does not have a rectangle, recreate it. If it does use it.
                 if (rect.contains(h.p) && !points.contains(h.p)) points.add(h.p);
-                if (h.left != null) {
+                if (h.left != null && h.nodeRect.xmin() < h.left.maximumX) {
                     // rHl = new RectHV(h.nodeRect.xmin(), h.nodeRect.ymin(), h.nodeRect.xmax(), h.p.y());
                     rHl = new RectHV(h.nodeRect.xmin(), h.nodeRect.ymin(), h.nodeRect.xmax(), y);
                     h.left.parent = h;
                     h.left.nodeRect = rHl;
-                    range(h.left, rect);
+                    intersectingNodes.insert(h.p);
+
                 }
-                if (h.right != null) {
+                if (h.right != null && h.nodeRect.xmax() > h.right.maximumX) {
                     // rHr = new RectHV(h.nodeRect.xmin(), h.p.y(), h.nodeRect.xmax(), h.nodeRect.ymax());
                     rHr = new RectHV(h.nodeRect.xmin(), y, h.nodeRect.xmax(), h.nodeRect.ymax());
                     h.right.parent = h;
                     h.right.nodeRect = rHr;
+                    intersectingNodes.insert(h.p);
                     range(h.right, rect);
                 }
-
-                if (rHl.intersects(rect) && h.left == null) {
-                    /* why test intersect? Just see if if the point is in the rectangle */
-                    if (rect.contains(h.p) && !points.contains(h.p)) points.add(h.p);
+                if (h.left != null) {
+                    range(h.left, rect);
+                    // if you run into nodes with null rectangle in points, you may have to set h.nodeRect to rHl here
                 }
-                if (rHl.intersects(rect) && h.left != null) {
-                    h.left.nodeRect = rHl;
-                    intersectingNodes.push(h.left);
-                }
-                if (rHr.intersects(rect) && h.right == null) {
-                    if (rect.contains(h.p) && !points.contains(h.p)) points.add(h.p);
-                }
-                if (rHr.intersects(rect) && h.right != null) {
-                    h.right.nodeRect = rHr;
-                    intersectingNodes.push(h.right);
-
+                if (h.right != null) {
+                    range(h.right, rect);
+                    /* if you run into nodes with null rectangle in points, you may have to set h.nodeRect to hHr here */
                 }
             }
         }
-
+        while (!intersectingNodes.isEmpty()) {
+            if (intersectingNodes.delMin().y() > rect.ymin()) {
+        /* it means it intersects and you should check all the points in the
+        branch that starts with this node */
+            } else if (intersectingNodes.delMin().y() < rect.ymax()) {
+        /* it means it intersects and you should check all the points in the
+        branch that starts with this node */
+            }
+        }
         return intersectingNodes;
     }
 
@@ -272,6 +287,7 @@ public class KdTree {
         if (p == null) throw new IllegalArgumentException("You can not insert null object" +
                 "into the tree");
         Node newNode = new Node(p, 1, false, null);
+        newNode.maximumX = p.x();
         root = insert(root, newNode);
     }
 
@@ -280,7 +296,7 @@ public class KdTree {
             return newNode;
         } else {
             int cmp = h.compareTo(newNode);
-            h.maximumX = Math.max(root.maximumX, newNode.p.x());
+            h.maximumX = Math.max(root.maximumX, newNode.maximumX);
             /* I think I just save maximum X to know which branches to visit, Y coordinate ranges are saved
              * in a separate tree to keep track of which intervals were covered. */
             if (cmp < 0) {
@@ -451,26 +467,38 @@ public class KdTree {
         In in = new In(filename);
 //        PointSET brute = new PointSET();
 //
-        while (!in.isEmpty()) {
+        int counter = 0;
+        for (int i = 0; i < 4; i++) {
             double x = in.readDouble();
             double y = in.readDouble();
             Point2D p = new Point2D(x, y);
             kdtree.insert(p);
-//            brute.insert(p);
         }
-        // kdtree.printLevelOrder();
-        // kdtree.ensureOrder();
-        // RectHV r = new RectHV(0.4, 0.1, 0.5, 0.3);
-        RectHV r = new RectHV(0.1, 0.1, 0.2, 0.2);
-        Stopwatch st = new Stopwatch();
-        kdtree.range(r);
-        double rangeElapsedTime = st.elapsedTime();
-//        StdOut.println("Here are the points in rectangle " + r);
-//        for (Point2D p : kdtree.range(r)) {
-//            StdOut.println(p);
+//        while (!in.isEmpty()) {
+//            double x = in.readDouble();
+//            double y = in.readDouble();
+//            Point2D p = new Point2D(x, y);
+//            kdtree.insert(p);
+        // StdOut.println(kdtree.root+""+kdtree.root.maximumX);
+//            brute.insert(p);
+        // counter++;
+        // StdOut.println(counter+" th number was just inserted.");
+//            StdOut.println();
+//            kdtree.printLevelOrder();
 //        }
-        StdOut.println("Kd range() took " + rangeElapsedTime + " seconds.");
-        StdOut.printf("Kd range() took %20.6f%n", rangeElapsedTime);
+
+        // kdtree.ensureOrder();
+        // RectHV r = new RectHV(0.1, 0.1, 0.5, 0.07);
+        RectHV r = new RectHV(0.1, 0.5, 0.8, 0.7);
+        // Stopwatch st = new Stopwatch();
+        // kdtree.range(r);
+        // double rangeElapsedTime = st.elapsedTime();
+        StdOut.println("Here are the points in rectangle " + r);
+        for (Point2D p : kdtree.range(r)) {
+            StdOut.println(p);
+        }
+        // StdOut.println("Kd range() took " + rangeElapsedTime + " seconds.");
+        // StdOut.printf("Kd range() took %20.6f%n", rangeElapsedTime);
         // kdtree.draw();
         // StdOut.println("now we are going to test range.");
         //

@@ -192,11 +192,9 @@ public class KdTree {
         double x = h.p.x();
         double y = h.p.y();
         if (rect.contains(h.p) && !points.contains(h.p)) points.add(h.p);
-        /* I think I should use rank() function perhaps every point with a rank more than rectangle's xmin, less than its
-         * xmax, more than its ymin, and less than ymax ? I also have to use the sweep line alg and save the y coordinates
-         * only until they have been processed, then remove them from the BST. Prossed I think means finding all the points
-         * in common with the rec. After building the tree, I just need to ask for all the points with rank of more than
-         * xmin, less than xmax, more than ymin, and less than xmax.:-) wow it seems so much easier than what I did below
+        /* I think I should use rank() function. rank() of a rectangle's xmin should give me the branch that I would then
+         * have to check all the nodes if they are contained by the rectangle. All this in logarithmic time. I also have
+         * wow it seems so much easier than what I did below
          * And I can start at the nodes which their rectangle intercepts with rect wow wow wow. Also use the interval search
          * tree algorithm and store the max of each subtree at the node so you do not have to traverse if entirely to see
          * if there is an overlap wow wow  In order to do SweepLine algorithm, create a loop that increases x coordinate
@@ -206,15 +204,7 @@ public class KdTree {
             // now create rHl
             if (!h.coordinate) {  // horizontal scenario
 
-                ///if (h.parent == null) {
-                // rHl = new RectHV(h.nodeRect.xmin(), h.nodeRect.ymin(), h.p.x(), h.nodeRect.ymax());
-                /* replaced point x coordinate with cached value  */
-                //rHl = new RectHV(h.nodeRect.xmin(), h.nodeRect.ymin(), x, h.nodeRect.ymax());
-                // rHr = new RectHV(h.p.x(), h.nodeRect.ymin(), h.nodeRect.xmax(), h.nodeRect.ymax());
-                //rHr = new RectHV(x, h.nodeRect.ymin(), h.nodeRect.xmax(), h.nodeRect.ymax());
-                //} else {
                 if (h.left != null && h.nodeRect.xmin() < h.left.maximumX) {
-                    // rHl = new RectHV(h.nodeRect.xmin(), h.nodeRect.ymin(), h.p.x(), h.nodeRect.ymax());
                     rHl = new RectHV(h.nodeRect.xmin(), h.nodeRect.ymin(), x, h.nodeRect.ymax());
                     h.left.parent = h;
                     h.left.nodeRect = rHl;

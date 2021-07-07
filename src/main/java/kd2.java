@@ -2,38 +2,29 @@ import edu.princeton.cs.algs4.*;
 
 import java.util.ArrayList;
 
-
 public class kd2 {
-
 
     private Node root;
     private Queue<Node> q = new Queue<>();
-    // private Queue<Point2D> pq = new Queue<>();
     private ArrayList<Point2D> points = new ArrayList<>();
-    // private BST<Double, Double> intTree = new BST<>();
     private Queue<Node> intersectingNodes = new Queue<>();
-    // MinPQ<Double> xCoordinates = new MinPQ<>();
-    // BST<Point2D, Point2D> inRangePoints = new BST<>();
     private RectHV rHl = null;
     private RectHV rHr = null;
-    // double leftY = 0;
-    // double rightY = 0;
     double x;
     double y;
-
 
     private static class Node implements Comparable<Node> {
         Point2D p; // key
         Node left, right, parent; // subtrees
         int n; // # nodes in this subtree
-        boolean coordinate; // 0 means horizontal
+        boolean orientation; // 0 means horizontal
         RectHV nodeRect;
         double maximumX = 0.0;
         double maximumY = 0.0;
 
         public Node(Point2D p, int n, boolean coordinate, Node parent) {
             this.p = p;
-            this.coordinate = coordinate;
+            this.orientation = coordinate;
             this.parent = parent;
             this.n = n;
             this.nodeRect = null;
@@ -45,21 +36,21 @@ public class kd2 {
             double thisY = this.p.y();
             double hX = h.p.x();
             double hY = h.p.y();
-            if (!this.coordinate) {
+            if (!this.orientation) {
                 if (thisX < hX) {
-                    h.coordinate = true;
+                    h.orientation = true;
                     return -1;
                 } else {
-                    h.coordinate = true;
+                    h.orientation = true;
                     return 1;
                 }
             }
-            if (this.coordinate) {
+            if (this.orientation) {
                 if (thisY < hY) {
-                    h.coordinate = false;
+                    h.orientation = false;
                     return -1;
                 } else {
-                    h.coordinate = false;
+                    h.orientation = false;
                     return 1;
                 }
             }
@@ -75,7 +66,7 @@ public class kd2 {
 
     private void draw(Node h, RectHV rectHV) {
         RectHV tempRect;
-        if (!h.coordinate) {
+        if (!h.orientation) {
             StdDraw.setPenColor(StdDraw.BLACK);
             StdDraw.setPenRadius(0.012);
             StdDraw.point(h.p.x(), h.p.y());
@@ -91,7 +82,7 @@ public class kd2 {
                 tempRect = new RectHV(h.p.x(), rectHV.ymin(), rectHV.xmax(), rectHV.ymax());
                 draw(h.right, tempRect);
             }
-        } else if (h.coordinate) {
+        } else if (h.orientation) {
             StdDraw.setPenColor(StdDraw.BLACK);
             StdDraw.setPenRadius(0.012);
             StdDraw.point(h.p.x(), h.p.y());
@@ -158,19 +149,36 @@ public class kd2 {
     }
 
     private Iterable<Node> range(Node h, RectHV rect) {
-        // check if point in node lies in give rectangle, if so, you are done
+        // check if point in node lies in given rectangle, if so, you are done
         if (rect.contains(h.p)) {
             intersectingNodes.enqueue(h);
             return intersectingNodes;
         }
-//        if (h.left != null && (rect.xmin() < h.left.maximumX || rect.ymin() < h.left.maximumY)) {
-//            range(h.left, rect);
-//        }
-//        if (h.right != null && (rect.xmin() < h.right.maximumX || rect.ymin() < h.right.maximumY)) {
-//            range(h.right, rect);
-//        }
-        if (h.left!=null) range(h.left, rect);
-        if (h.right!=null) range(h.right, rect);
+        /* I might have to acitvate this and test it. The code below is likely to be more accurate and test
+        better while more effecient ...
+        if (!h.orientation) { // Horizontal / x-axis
+            if (h.left != null && rect.xmin() < h.left.maximumX) {
+                range(h.left, rect);
+            }
+            if (h.right != null && rect.xmin() < h.right.maximumX) {
+                range(h.right, rect);
+            }
+        } else if (h.orientation) { // vertical node - y axis
+            if (h.left != null && rect.ymin() < h.left.maximumY) {
+                range(h.left, rect);
+            }
+            if (h.right != null && rect.ymin() < h.right.maximumY) {
+                range(h.right, rect);
+            }
+        }*/
+        if (h.left != null && (rect.xmin() < h.left.maximumX || rect.ymin() < h.left.maximumY)) {
+            range(h.left, rect);
+        }
+        if (h.right != null && (rect.xmin() < h.right.maximumX || rect.ymin() < h.right.maximumY)) {
+            range(h.right, rect);
+        }
+        if (h.left != null) range(h.left, rect);
+        if (h.right != null) range(h.right, rect);
         return intersectingNodes;
     }
 
@@ -188,7 +196,7 @@ public class kd2 {
             return newNode;
         } else {
             int cmp = h.compareTo(newNode);
-            /* I think I just save maximum X to know which branches to visit, Y coordinate ranges are saved
+            /* I think I just save maximum X to know which branches to visit, Y orientation ranges are saved
              * in a separate tree to keep track of which intervals were covered. */
             if (cmp < 0) {
                 newNode.parent = h;
@@ -248,7 +256,7 @@ public class kd2 {
         RectHV rHl = null;
         RectHV rHr = null;
         if (h == null) return nearstP;
-        if (!h.coordinate) {
+        if (!h.orientation) {
             if (h.parent == null) {
                 rHl = new RectHV(0.0, 0.0, h.p.x(), 1.0);
                 rHr = new RectHV(h.p.x(), 0.0, 1.0, 1.0);
@@ -280,7 +288,7 @@ public class kd2 {
             }
 
         }
-        if (h.coordinate) {
+        if (h.orientation) {
             rHl = new RectHV(h.nodeRect.xmin(), h.nodeRect.ymin(), h.nodeRect.xmax(), h.p.y());
             rHr = new RectHV(h.nodeRect.xmin(), h.p.y(), h.nodeRect.xmax(), h.nodeRect.ymax());
             // rHr = new RectHV(h.p.x(),h.nodeRect.ymin(),h.nodeRect.xmax(),h.nodeRect.ymax());
@@ -499,7 +507,7 @@ public class kd2 {
 //        StdOut.println("Finished w/o errors.");
 //        int index = 1;
 //        for (Node n : k.keys()) {
-//            if (n.coordinate == true) {
+//            if (n.orientation == true) {
 //                StdOut.println(index + "-" + n.p);
 //                index++;
 //            }

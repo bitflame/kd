@@ -1,5 +1,10 @@
 
-import edu.princeton.cs.algs4.*;
+import edu.princeton.cs.algs4.Point2D;
+import edu.princeton.cs.algs4.RectHV;
+import edu.princeton.cs.algs4.Queue;
+import edu.princeton.cs.algs4.StdDraw;
+import edu.princeton.cs.algs4.StdOut;
+import edu.princeton.cs.algs4.In;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -8,25 +13,26 @@ import java.util.Comparator;
 public class KdTree {
     private Node root;
     private Queue<Node> q = new Queue<>();
-    private Queue<Point2D> pq = new Queue<>();
+
     private ArrayList<Point2D> points = new ArrayList<>();
-    private BST<Double, Double> intTree = new BST<>();
-    private MinPQ<Node> intersectingNodes = new MinPQ<>();
+    private Queue<Node> intersectingNodes = new Queue<>();
     private RectHV rHl = null;
     private RectHV rHr = null;
+    private double x;
+    private double y;
 
     private static class Node implements Comparable<Node> {
         Point2D p; // key
         Node left, right, parent; // subtrees
         int n; // # nodes in this subtree
-        boolean coordinate; // 0 means horizontal
+        boolean orientation; // 0 means horizontal
         RectHV nodeRect;
         double maximumX = 0.0;
         double maximumY = 0.0;
 
         public Node(Point2D p, int n, boolean coordinate, Node parent) {
             this.p = p;
-            this.coordinate = coordinate;
+            this.orientation = coordinate;
             this.parent = parent;
             this.n = n;
             this.nodeRect = null;
@@ -38,21 +44,21 @@ public class KdTree {
             double thisY = this.p.y();
             double hX = h.p.x();
             double hY = h.p.y();
-            if (!this.coordinate) {
+            if (!this.orientation) {
                 if (thisX < hX) {
-                    h.coordinate = true;
+                    h.orientation = true;
                     return -1;
                 } else {
-                    h.coordinate = true;
+                    h.orientation = true;
                     return 1;
                 }
             }
-            if (this.coordinate) {
+            if (this.orientation) {
                 if (thisY < hY) {
-                    h.coordinate = false;
+                    h.orientation = false;
                     return -1;
                 } else {
-                    h.coordinate = false;
+                    h.orientation = false;
                     return 1;
                 }
             }
@@ -68,7 +74,7 @@ public class KdTree {
 
     private void draw(Node h, RectHV rectHV) {
         RectHV tempRect;
-        if (!h.coordinate) {
+        if (!h.orientation) {
             StdDraw.setPenColor(StdDraw.BLACK);
             StdDraw.setPenRadius(0.012);
             StdDraw.point(h.p.x(), h.p.y());
@@ -84,7 +90,7 @@ public class KdTree {
                 tempRect = new RectHV(h.p.x(), rectHV.ymin(), rectHV.xmax(), rectHV.ymax());
                 draw(h.right, tempRect);
             }
-        } else if (h.coordinate) {
+        } else if (h.orientation) {
             StdDraw.setPenColor(StdDraw.BLACK);
             StdDraw.setPenRadius(0.012);
             StdDraw.point(h.p.x(), h.p.y());
@@ -103,11 +109,7 @@ public class KdTree {
         }
 
     }
-private void sweepLineAlg(){
-        /* insert y-coordinate into the bst, Horizontal-segment left endpoint insert y-coordinate into the BST. At
-        Horizontal-segment right endpoint: remove y-coodinate from BST. When encountering a vertical-segment: range
-         search for interface of y-endpoints*/
-}
+
     private Point2D get(Point2D p) {
         return get(root, p);
     }
@@ -148,114 +150,42 @@ private void sweepLineAlg(){
     public Iterable<Point2D> range(RectHV rect) {
         if (rect == null) throw new IllegalArgumentException("rectangle has to be a valid " +
                 "object. ");
-        root.nodeRect = new RectHV(0.0, 0.0, 1.0, 1.0);
-
-        /* I may have to and be able to use these  now to make sure I do not look at rectangles I do not need to. Once
-         * the rect is covered, I am done. Right now, it might have too many rectangles to count. It might! Might just
-         * work. Also as you pull off nodes from intersectionRectangles, you can check to see if left and right intersect,
-         * and if so, just ignore the parent and not check for points since it is redundant. You can save time and
-         * processing. */
-        for (Object o : range(root, rect)) {  // make sure the smallest rec is coming in first; if not, fix it
-            Node node = (Node) o;
-            for (Node n : keys(node)) {
-                if (rect.contains(n.p) && (!points.contains(n.p))) points.add(n.p);
-
-            }
+        for (Node node : range(root, rect)) {
+            if (!points.contains(node.p)) points.add(node.p);
         }
         return points;
     }
 
     private Iterable<Node> range(Node h, RectHV rect) {
-        // for (double i = 0.0;i<1.0;i+=0.1){
-        // if (h.nodeRect.xmin()<=i){
-        // Problem - I can not use any other BST and I am using this one to store points
-        // }
-
-        /* only create rectangles if the point at the node is in the target rectangle */
-        double x = h.p.x();
-        double y = h.p.y();
+        // check if point in node lies in given rectangle, if so, you are done
         if (rect.contains(h.p)) {
-            intersectingNodes.insert(h);
-            // If rect contains the root node, it contains all the nodes underneath it
+            intersectingNodes.enqueue(h);
             return intersectingNodes;
         }
-        /* I think I should use rank() function. rank() of a rectangle's xmin should give me the branch that I would then
-         * have to check all the nodes if they are contained by the rectangle. All this in logarithmic time. I also have
-         * wow it seems so much easier than what I did below
-         * And I can start at the nodes which their rectangle intercepts with rect wow wow wow. Also use the interval search
-         * tree algorithm and store the max of each subtree at the node so you do not have to traverse if entirely to see
-         * if there is an overlap wow wow  In order to do SweepLine algorithm, create a loop that increases x coordinate
-         * by .1 and checks to see if there are any rectangles with minx value smaller or equal to the current x i.e.
-         * kdtree.floor(currentX). You have to check to see if  you need to update the maximum on the way up the tree. I
-         * think I did it while going down. Test to make sure the maximum x propagates to the top correctly. Create a
-         * tree like slide 24 with tailored coordinates and see if it behaves the same. I think one of the test files
-         * already has them. See if size() gives you all the nodes below a node i.e. rank. Create a unit test for it,
-         * and validate it. As you check to see which rectangles intersect with rect, you can create an interval symbol
-         * table of a the points in the intersecting rectangles so you can later check to see if rect.contain()s them.
-         * Instead of creating rectangles and saving them in the KdTree, save the interval; I think both x and y. Then
-         * when you are looking for intersecting rectangles you can look for the ones that intersect the x interval of
-         * your rectangle, and you have the y coordinate also. But most importantly you have the points as value.  How
-         * the heck do i store more than one value? Maybe I can make the comparator so that two nodes are never the same?
-         * Perhaps x+y+value? Slide 54 says exactly how to get the intersections with Sweep Line algorithm. I guess then
-         * I can get the points for those intervals from an interval tree; kinda looks like the tree I implemented here.
-         * check to see if the rect contains the node at the root, and so we are done. If it contains the node at the root
-         * it contains all the nodes in that subtree. The knowledge of rect intersecting the spliting line at a node
-         * will let us know which subtrees we need to search  */
-        {
-            // now create rHl
-            if (!h.coordinate) {  // horizontal scenario
-
-                if (h.left != null) {
-                    rHl = new RectHV(h.nodeRect.xmin(), h.nodeRect.ymin(), h.p.x(), h.nodeRect.ymax());
-                    h.left.parent = h;
-                    h.left.nodeRect = rHl;
-                }
-                if (h.right != null) {
-                    // rHr = new RectHV(h.p.x(), h.nodeRect.ymin(), h.nodeRect.xmax(), h.nodeRect.ymax());
-                    rHr = new RectHV(x, h.nodeRect.ymin(), h.nodeRect.xmax(), h.nodeRect.ymax());
-                    h.right.parent = h;
-                    h.right.nodeRect = rHr;
-                }
-                if (h.left != null && h.nodeRect.xmin() < h.left.maximumX) {
-                    h.left.nodeRect = rHl;
-                    range(h.left, rect);
-                    // if you run into nodes with null rectangle in points, you may have to set h.nodeRect to rHl here
-                }
-
-                if (h.right != null && h.nodeRect.xmax() > h.right.maximumX) {
-                    h.right.nodeRect = rHr;
-                    range(h.right, rect);
-                    /* if you run into nodes with null rectangle in points, you may have to set h.nodeRect to hHr here */
-                }
+        /* I might have to acitvate this and test it. The code below is likely to be more accurate and test
+        better while more effecient ...
+        if (!h.orientation) { // Horizontal / x-axis
+            if (h.left != null && rect.xmin() < h.left.maximumX) {
+                range(h.left, rect);
             }
-            if (h.coordinate) {  // If h does not have a rectangle, recreate it. If it does use it.
-                if (rect.contains(h.p)) {
-                    intersectingNodes.insert(h);
-                    return intersectingNodes;
-                }
-                if (h.left != null && h.nodeRect.xmin() < h.left.maximumX) {
-                    // rHl = new RectHV(h.nodeRect.xmin(), h.nodeRect.ymin(), h.nodeRect.xmax(), h.p.y());
-                    rHl = new RectHV(h.nodeRect.xmin(), h.nodeRect.ymin(), h.nodeRect.xmax(), y);
-                    h.left.parent = h;
-                    h.left.nodeRect = rHl;
-                }
-                if (h.right != null && h.nodeRect.xmax() > h.right.maximumX) {
-                    // rHr = new RectHV(h.nodeRect.xmin(), h.p.y(), h.nodeRect.xmax(), h.nodeRect.ymax());
-                    rHr = new RectHV(h.nodeRect.xmin(), y, h.nodeRect.xmax(), h.nodeRect.ymax());
-                    h.right.parent = h;
-                    h.right.nodeRect = rHr;
-                }
-                if (h.left != null) {
-                    h.left.nodeRect = rHl;
-                    range(h.left, rect);
-                    // if you run into nodes with null rectangle in points, you may have to set h.nodeRect to rHl here
-                }
-                if (h.right != null) {
-                    h.right.nodeRect = rHr;
-                    range(h.right, rect);
-                    /* if you run into nodes with null rectangle in points, you may have to set h.nodeRect to hHr here */
-                }
+            if (h.right != null && rect.xmin() < h.right.maximumX) {
+                range(h.right, rect);
             }
+        } else if (h.orientation) { // vertical node - y axis
+            if (h.left != null && rect.ymin() < h.left.maximumY) {
+                range(h.left, rect);
+            }
+            if (h.right != null && rect.ymin() < h.right.maximumY) {
+                range(h.right, rect);
+            }
+        }*/
+        /*I should be a able to narrow down my results based on h.p.x() and h.p.y() itself. Not just the
+        * maximumX and maximumY */
+        if (h.left != null && (rect.xmin() < h.left.maximumX || rect.ymin() < h.left.maximumY)) {
+            range(h.left, rect);
+        }
+        if (h.right != null && (rect.xmin() < h.right.maximumX || rect.ymin() < h.right.maximumY)) {
+            range(h.right, rect);
         }
         return intersectingNodes;
     }
@@ -273,26 +203,41 @@ private void sweepLineAlg(){
             return newNode;
         } else {
             int cmp = h.compareTo(newNode);
-            h.maximumX = Math.max(root.maximumX, newNode.maximumX);
-            /* I think I just save maximum X to know which branches to visit, Y coordinate ranges are saved
+            /* I think I just save maximum X to know which branches to visit, Y orientation ranges are saved
              * in a separate tree to keep track of which intervals were covered. */
             if (cmp < 0) {
                 newNode.parent = h;
                 h.right = insert(h.right, newNode);
+                h.maximumX = Math.max(h.maximumX, h.right.maximumX);
+                h.maximumY = Math.max(h.maximumY, h.right.maximumY);
             } else if (cmp > 0) {
                 newNode.parent = h;
                 h.left = insert(h.left, newNode);
+                h.maximumX = Math.max(h.maximumX, h.left.maximumX);
+                h.maximumY = Math.max(h.maximumY, h.left.maximumY);
             }
         }
         int leftN = 0;
         if (h.left != null) {
             leftN = h.left.n;
+            h.maximumX = Math.max(h.maximumX, h.left.maximumX);
+            h.maximumY = Math.max(h.maximumY, h.left.maximumY);
         }
         int rightN = 0;
         if (h.right != null) {
             rightN = h.right.n;
+            h.maximumX = Math.max(h.maximumX, h.right.maximumX);
+            h.maximumY = Math.max(h.maximumY, h.right.maximumY);
         }
         h.n = leftN + rightN + 1;
+        if (h.right != null) {
+            h.maximumX = Math.max(h.maximumX, h.right.maximumX);
+            h.maximumY = Math.max(h.maximumY, h.right.maximumY);
+        }
+        if (h.left != null) {
+            h.maximumX = Math.max(h.maximumX, h.left.maximumX);
+            h.maximumY = Math.max(h.maximumY, h.left.maximumY);
+        }
         return h;
     }
 
@@ -318,7 +263,7 @@ private void sweepLineAlg(){
         RectHV rHl = null;
         RectHV rHr = null;
         if (h == null) return nearstP;
-        if (!h.coordinate) {
+        if (!h.orientation) {
             if (h.parent == null) {
                 rHl = new RectHV(0.0, 0.0, h.p.x(), 1.0);
                 rHr = new RectHV(h.p.x(), 0.0, 1.0, 1.0);
@@ -350,7 +295,7 @@ private void sweepLineAlg(){
             }
 
         }
-        if (h.coordinate) {
+        if (h.orientation) {
             rHl = new RectHV(h.nodeRect.xmin(), h.nodeRect.ymin(), h.nodeRect.xmax(), h.p.y());
             rHr = new RectHV(h.nodeRect.xmin(), h.p.y(), h.nodeRect.xmax(), h.nodeRect.ymax());
             // rHr = new RectHV(h.p.x(),h.nodeRect.ymin(),h.nodeRect.xmax(),h.nodeRect.ymax());
@@ -470,7 +415,7 @@ private void sweepLineAlg(){
 
         // kdtree.ensureOrder();
         //RectHV r = new RectHV(0.1, 0.1, 0.5, 0.7);
-        RectHV r = new RectHV(0.1, 0.5, 0.3, 0.7);
+        RectHV r = new RectHV(0.48, 0.28, 0.50, 0.31);
         // Stopwatch st = new Stopwatch();
         // kdtree.range(r);
         // double rangeElapsedTime = st.elapsedTime();

@@ -171,6 +171,7 @@ public class kd2 {
                 range(h.right, rect);
             }
         }*/
+        /* */
         if (h.left != null && (rect.xmin() < h.left.maximumX || rect.ymin() < h.left.maximumY)) {
             range(h.left, rect);
         }

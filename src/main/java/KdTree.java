@@ -19,7 +19,7 @@ public class KdTree {
     private double ymin;
     private double xmax;
     private double ymax;
-    private MinPQ<Double> xCoord = new MinPQ<>();
+    private MinPQ<Double> xCoordinates = new MinPQ<>();
 
     /* private class IntervalST<Key extends Comparable<Key>, Value> {
         private Node root;
@@ -170,7 +170,9 @@ public class KdTree {
         // maximum values in each tree
         double maximumX = 0.0;
         double maximumY = 0.0;
-        // for tracking y interval
+        // for tracking rectangle intervals
+        double minXInter = 0.0;
+        double maxXInter = 1.0;
         double minYInter = 0.0;
         double maxYInter = 1.0;
 
@@ -190,19 +192,15 @@ public class KdTree {
             double hY = h.p.y();
             if (!this.orientation) {
                 if (thisX < hX) {
-                    h.orientation = true;
                     return -1;
                 } else {
-                    h.orientation = true;
                     return 1;
                 }
             }
             if (this.orientation) {
                 if (thisY < hY) {
-                    h.orientation = false;
                     return -1;
                 } else {
-                    h.orientation = false;
                     return 1;
                 }
             }
@@ -357,26 +355,72 @@ public class KdTree {
     public void insert(Point2D p) {
         if (p == null) throw new IllegalArgumentException("You can not insert null object" +
                 "into the tree");
-        xCoord.insert(p.x());
+        xCoordinates.insert(p.x());
         Node newNode = new Node(p, 1, false, null);
         newNode.maximumX = p.x();
         root = insert(root, newNode);
+    }
+
+    private void setLeftRectIntervals(Node x) {
+        /// todo - Change this later to just double values once you no longer get xmin > xmax and ymin > ymax errors
+        /* Use the values in the video for testing to make sure you get the same results. Also create your own
+         * tests with tailored values in all quadrants, and quadrants within and outside them  */
+        RectHV left;
+        if (!x.parent.orientation) {
+            left = new RectHV(x.parent.minXInter, x.parent.minYInter, x.parent.p.x(), x.parent.maximumY);
+// add the try statement here and if maximums are less than minimums, throw an error
+            x.minXInter = x.parent.minXInter;
+            x.minYInter = x.parent.minYInter;
+            x.maximumX = x.parent.p.x();
+            x.maximumY = x.parent.maximumY;
+        } else {
+            left = new RectHV(x.parent.minXInter, x.parent.minYInter, x.parent.maximumX, x.parent.p.y());
+            // add the try statement here and if maximums are less than minimums, throw an error
+            x.minXInter = x.parent.minXInter;
+            x.minYInter = x.parent.minYInter;
+            x.maximumX = x.parent.maximumX;
+            x.maximumY = x.parent.p.y();
+        }
+    }
+
+    private void setRightRectIntervals(Node x) {
+        RectHV right;
+        if (!x.parent.orientation) {
+            // horizontal node
+            right = new RectHV(x.parent.p.x(), x.parent.minYInter, x.parent.maximumX, x.parent.maximumY);
+
+            // add the try statement here and if maximums are less than minimums, throw an error
+            x.minXInter = x.parent.p.x();
+            x.minYInter = x.parent.minYInter;
+            x.maximumX = x.parent.maximumX;
+            x.maximumY = x.parent.maximumY;
+        } else {
+            // vertical node
+            right = new RectHV(x.parent.minXInter, x.parent.p.y(), x.parent.maximumX, x.parent.maximumY);
+            // add the try statement here and if maximums are less than minimums, throw an error
+            x.minXInter = x.parent.minXInter;
+            x.minYInter = x.parent.p.y();
+            x.maximumX = x.parent.maximumX;
+            x.maximumY = x.parent.maximumY;
+        }
     }
 
     private Node insert(Node h, Node newNode) {
         if (h == null) {
             return newNode;
         } else {
+            newNode.orientation = !h.orientation;
             int cmp = h.compareTo(newNode);
-            /* I think I just save maximum X to know which branches to visit, Y orientation ranges are saved
-             * in a separate tree to keep track of which intervals were covered. */
-            if (cmp < 0) {
+            if (cmp < 0) {  // It means root is smaller than the new node
                 newNode.parent = h;
+                setRightRectIntervals(newNode);
                 h.right = insert(h.right, newNode);
                 h.maximumX = Math.max(h.maximumX, h.right.maximumX);
                 h.maximumY = Math.max(h.maximumY, h.right.maximumY);
-            } else if (cmp > 0) {
+
+            } else if (cmp > 0) {  // it means root is larger than the new node
                 newNode.parent = h;
+                setLeftRectIntervals(newNode);
                 h.left = insert(h.left, newNode);
                 h.maximumX = Math.max(h.maximumX, h.left.maximumX);
                 h.maximumY = Math.max(h.maximumY, h.left.maximumY);

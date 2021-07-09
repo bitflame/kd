@@ -1,10 +1,5 @@
 
-import edu.princeton.cs.algs4.Point2D;
-import edu.princeton.cs.algs4.RectHV;
-import edu.princeton.cs.algs4.Queue;
-import edu.princeton.cs.algs4.StdDraw;
-import edu.princeton.cs.algs4.StdOut;
-import edu.princeton.cs.algs4.In;
+import edu.princeton.cs.algs4.*;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -20,21 +15,170 @@ public class KdTree {
     private RectHV rHr = null;
     private double x;
     private double y;
+    private double xmin;
+    private double ymin;
+    private double xmax;
+    private double ymax;
+    private MinPQ<Double> xCoord = new MinPQ<>();
 
+    /* private class IntervalST<Key extends Comparable<Key>, Value> {
+        private Node root;
+        Queue<Value> Q = new Queue<>();
+
+        private class Node {
+            private Key lo;
+            private Key hi;
+            private Value val;
+            private Node left, right;
+            private int N;
+
+            public Node(Key high, Key low, Value value) {
+                this.lo = low;
+                this.hi = high;
+                this.val = value;
+            }
+        }
+
+        void put(Key lo, Key hi, Value val) {
+            root = put(root, lo, hi, val);
+        }
+
+        private Node put(Node x, Key lo, Key hi, Value value) {
+            if (x == null) return new Node(lo, hi, value);
+            int cmp = lo.compareTo(x.lo);
+            if (cmp < 0) x.left = put(x.left, lo, hi, value);
+            if (cmp > 0) x.right = put(x.right, lo, hi, value);
+            else x.val = value;
+            x.N = size(x.left) + size(x.right) + 1;
+            return x;
+        }
+
+        public int size() {
+            return size(root);
+        }
+
+        private int size(Node x) {
+            if (x == null) return 0;
+            else return x.N;
+        }
+
+        Value get(Key lo, Key hi) {
+            return get(root, lo, hi);
+        }
+
+        private Value get(Node x, Key lo, Key hi) {
+            if (x == null) return null;
+            int cmp = lo.compareTo(x.lo);
+            if (cmp < 0) return get(x.left, lo, hi);
+            else if (cmp > 0) return get(x.right, lo, hi);
+            else return x.val;
+        }
+
+        void delete(Key lo, Key hi) {
+            root = delete(root, lo, hi);
+        }
+
+        private Node delete(Node x, Key lo, Key hi) {
+            if (x == null) return null;
+            int cmp = lo.compareTo(x.lo);
+            if (cmp < 0) x.left = delete(x.left, lo, hi);
+            else if (cmp > 0) x.right = delete(x.right, lo, hi);
+            else {
+                if (x.right == null) return x.left;
+                if (x.left == null) return x.right;
+                Node t = x;
+                x = min(t.right);
+                x.right = deleteMin(t.right);
+                x.left = t.left;
+            }
+            x.N = size(x.left) + size(x.right) + 1;
+            return x;
+        }
+
+        public void deleteMin() {
+            root = deleteMin(root);
+        }
+
+
+        private Node deleteMin(Node x) {
+            if (x.left == null) return x.right;
+            x.left = deleteMin(x.left);
+            x.N = size(x.left) + size(x.right) + 1;
+            return x;
+        }
+
+        Iterable<Value> intersects(Key lo, Key hi) {
+            return intersects(root, lo, hi);
+        }
+
+        /// todo - Needs implementing
+        private Iterable<Value> intersects(Node x, Key lo, Key hi) {
+            return Q;
+        }
+
+        public Key select(int k) {
+            return select(root, k).lo;
+        }
+
+        private Node select(Node x, int k) {
+            if (x == null) return null;
+            int t = size(x.left);
+            if (t > k) return select(x.left, k);
+            else if (t < k) return select(x.right, k - t - 1);
+            else return x;
+        }
+
+        public int rank(Key lo) {
+            return rank(lo, root);
+        }
+
+        private int rank(Key lo, Node x) {
+            if (x == null) return 0;
+            int cmp = lo.compareTo(x.lo);
+            if (cmp < 0) return rank(lo, x.left);
+            else if (cmp > 0) return 1 + size(x.left) + rank(lo, x.right);
+            else return size(x.left);
+        }
+
+        public Key min() {
+            return min(root).lo;
+        }
+
+        private Node min(Node x) {
+            if (x.left == null) return x;
+            return min(x.left);
+        }
+
+        private Node floor(Node x, Key lo) {
+            if (x == null) return null;
+            int cmp = lo.compareTo(x.lo);
+            if (cmp == 0) return x;
+            if (cmp < 0) return floor(x.left, lo);
+            Node t = floor(x.right, lo);
+            if (t != null) return t;
+            else return x;
+        }
+    } */
+
+    /************************************* End of Interval Search Tree **********************************/
     private static class Node implements Comparable<Node> {
         Point2D p; // key
         Node left, right, parent; // subtrees
-        int n; // # nodes in this subtree
+        int N; // # nodes in this subtree
         boolean orientation; // 0 means horizontal
         RectHV nodeRect;
+        // maximum values in each tree
         double maximumX = 0.0;
         double maximumY = 0.0;
+        // for tracking y interval
+        double minYInter = 0.0;
+        double maxYInter = 1.0;
 
         public Node(Point2D p, int n, boolean coordinate, Node parent) {
             this.p = p;
             this.orientation = coordinate;
             this.parent = parent;
-            this.n = n;
+            this.N = n;
             this.nodeRect = null;
         }
 
@@ -150,6 +294,7 @@ public class KdTree {
     public Iterable<Point2D> range(RectHV rect) {
         if (rect == null) throw new IllegalArgumentException("rectangle has to be a valid " +
                 "object. ");
+        root.nodeRect = new RectHV(0.0, 0.0, 1.0, 1.0);
         for (Node node : range(root, rect)) {
             if (!points.contains(node.p)) points.add(node.p);
         }
@@ -157,11 +302,21 @@ public class KdTree {
     }
 
     private Iterable<Node> range(Node h, RectHV rect) {
+
+        x = h.p.x();
+        y = h.p.y();
+        xmin = rect.xmin();
+        xmax = rect.xmax();
+        ymin = rect.ymin();
+        ymax = rect.ymax();
         // check if point in node lies in given rectangle, if so, you are done
         if (rect.contains(h.p)) {
             intersectingNodes.enqueue(h);
             return intersectingNodes;
+        } else if (xmin < x && ymin < y && xmax > x && ymax > y) {
+            // add x to a minPriorityQueue and y to an interval tree -
         }
+
         /* I might have to acitvate this and test it. The code below is likely to be more accurate and test
         better while more effecient ...
         if (!h.orientation) { // Horizontal / x-axis
@@ -179,12 +334,21 @@ public class KdTree {
                 range(h.right, rect);
             }
         }*/
-        /*I should be a able to narrow down my results based on h.p.x() and h.p.y() itself. Not just the
-        * maximumX and maximumY */
-        if (h.left != null && (rect.xmin() < h.left.maximumX || rect.ymin() < h.left.maximumY)) {
+        /*
+         * Add the  coordinates to a MinPQ as you are building up the tree, you can use them to implement sweep-line
+         * When range() is called, start building
+         * your IntervalSearchST by going through the minPriorityQueue When a tree node's rectangle x interval overlaps target rectangle's x coordinate put
+         * the miny, maxy, and the tree node's point into an IntervalTreeST, i.e. when h.p.x or x is equal to minx put y
+         * coordinate in a bst, when h.p.x or x is equal to maxx take the y coordinate off the tree interval tree is
+         * composed of miny, maxy of the rectangle of each node, and the value is the point in it. We start building
+         *  these.
+         *  rectangles when range starts, and if there is an overlap in x coordinate values of our target
+         * and the tree node, we add the miny,maxy, and the point to a 2-D tree. Once we reach maxx of our target rectangle
+         * we check each node and its children if they are inside the tree. */
+        if (h.left != null && (xmin < h.left.maximumX || ymin < h.left.maximumY)) {
             range(h.left, rect);
         }
-        if (h.right != null && (rect.xmin() < h.right.maximumX || rect.ymin() < h.right.maximumY)) {
+        if (h.right != null && (xmin < h.right.maximumX || ymin < h.right.maximumY)) {
             range(h.right, rect);
         }
         return intersectingNodes;
@@ -193,6 +357,7 @@ public class KdTree {
     public void insert(Point2D p) {
         if (p == null) throw new IllegalArgumentException("You can not insert null object" +
                 "into the tree");
+        xCoord.insert(p.x());
         Node newNode = new Node(p, 1, false, null);
         newNode.maximumX = p.x();
         root = insert(root, newNode);
@@ -219,17 +384,17 @@ public class KdTree {
         }
         int leftN = 0;
         if (h.left != null) {
-            leftN = h.left.n;
+            leftN = h.left.N;
             h.maximumX = Math.max(h.maximumX, h.left.maximumX);
             h.maximumY = Math.max(h.maximumY, h.left.maximumY);
         }
         int rightN = 0;
         if (h.right != null) {
-            rightN = h.right.n;
+            rightN = h.right.N;
             h.maximumX = Math.max(h.maximumX, h.right.maximumX);
             h.maximumY = Math.max(h.maximumY, h.right.maximumY);
         }
-        h.n = leftN + rightN + 1;
+        h.N = leftN + rightN + 1;
         if (h.right != null) {
             h.maximumX = Math.max(h.maximumX, h.right.maximumX);
             h.maximumY = Math.max(h.maximumY, h.right.maximumY);
@@ -243,7 +408,7 @@ public class KdTree {
 
     public int size() {
         if (root == null) return 0;
-        else return root.n;
+        else return root.N;
     }
 
     public Point2D nearest(Point2D p) {

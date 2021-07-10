@@ -206,6 +206,16 @@ public class KdTree {
             }
             return 1;
         }
+
+        /*Here is the code for intersects
+        public boolean intersects(RectHV that) {
+            return this.xmax >= that.xmin && this.ymax >= that.ymin
+                    && that.xmax >= this.xmin && that.ymax >= this.ymin;
+        }*/
+        private boolean intersects(double lo, double hi) {
+            if (this.maxYInter >= lo && hi >= this.minYInter) return true;
+            return false;
+        }
     }
 
     public void draw() {
@@ -289,67 +299,52 @@ public class KdTree {
         return get(p) != null;
     }
 
+    /*  private Node floor(Node x, Key lo) {
+          if (x == null) return null;
+          int cmp = lo.compareTo(x.lo);
+          if (cmp == 0) return x;
+          if (cmp < 0) return floor(x.left, lo);
+          Node t = floor(x.right, lo);
+          if (t != null) return t;
+          else return x;
+          Here is the code for intersects
+          public boolean intersects(RectHV that) {
+          return this.xmax >= that.xmin && this.ymax >= that.ymin
+              && that.xmax >= this.xmin && that.ymax >= this.ymin;
+      }
+      } */
+
+
     public Iterable<Point2D> range(RectHV rect) {
+
         if (rect == null) throw new IllegalArgumentException("rectangle has to be a valid " +
                 "object. ");
-        root.nodeRect = new RectHV(0.0, 0.0, 1.0, 1.0);
-        for (Node node : range(root, rect)) {
-            if (!points.contains(node.p)) points.add(node.p);
-        }
+        range(root, rect);
         return points;
     }
 
-    private Iterable<Node> range(Node h, RectHV rect) {
-
-        x = h.p.x();
-        y = h.p.y();
-        xmin = rect.xmin();
-        xmax = rect.xmax();
-        ymin = rect.ymin();
-        ymax = rect.ymax();
-        // check if point in node lies in given rectangle, if so, you are done
-        if (rect.contains(h.p)) {
-            intersectingNodes.enqueue(h);
-            return intersectingNodes;
-        } else if (xmin < x && ymin < y && xmax > x && ymax > y) {
-            // add x to a minPriorityQueue and y to an interval tree -
-        }
-
-        /* I might have to acitvate this and test it. The code below is likely to be more accurate and test
-        better while more effecient ...
-        if (!h.orientation) { // Horizontal / x-axis
-            if (h.left != null && rect.xmin() < h.left.maximumX) {
-                range(h.left, rect);
-            }
-            if (h.right != null && rect.xmin() < h.right.maximumX) {
-                range(h.right, rect);
-            }
-        } else if (h.orientation) { // vertical node - y axis
-            if (h.left != null && rect.ymin() < h.left.maximumY) {
-                range(h.left, rect);
-            }
-            if (h.right != null && rect.ymin() < h.right.maximumY) {
-                range(h.right, rect);
-            }
-        }*/
-        /*
-         * Add the  coordinates to a MinPQ as you are building up the tree, you can use them to implement sweep-line
-         * When range() is called, start building
-         * your IntervalSearchST by going through the minPriorityQueue When a tree node's rectangle x interval overlaps target rectangle's x coordinate put
-         * the miny, maxy, and the tree node's point into an IntervalTreeST, i.e. when h.p.x or x is equal to minx put y
-         * coordinate in a bst, when h.p.x or x is equal to maxx take the y coordinate off the tree interval tree is
-         * composed of miny, maxy of the rectangle of each node, and the value is the point in it. We start building
-         *  these.
-         *  rectangles when range starts, and if there is an overlap in x coordinate values of our target
-         * and the tree node, we add the miny,maxy, and the point to a 2-D tree. Once we reach maxx of our target rectangle
-         * we check each node and its children if they are inside the tree. */
-        if (h.left != null && (xmin < h.left.maximumX || ymin < h.left.maximumY)) {
-            range(h.left, rect);
-        }
-        if (h.right != null && (xmin < h.right.maximumX || ymin < h.right.maximumY)) {
-            range(h.right, rect);
+    private Iterable<Node> getIntersectingNodes(Node x, RectHV rect) {
+        /* Get x from xCoordinates and see if it intersects with rect's lo and hi. lo=rect.miny() and hi= rect.maxy()
+         * Also; instead of returning x, collect all of the intersecting nodes in an array list or something in case
+         * there is more than one, and check them out. If */
+        double lo = rect.ymin();
+        double hi = rect.ymax();
+        while (x != null) {
+            if (x.intersects(lo, hi)) intersectingNodes.enqueue(x);// I should collect y intervals instead of nodes here
+            else if (x.left == null) x = x.right;
+            else if (x.left.maximumX < lo) x = x.right;
+            else x = x.left;
         }
         return intersectingNodes;
+    }
+
+    public Iterable<Point2D> range(Node x, RectHV rect) {
+        for (Node n: intersectingNodes) {
+            for (Node node: keys(n)){
+                if (rect.contains(node.p)) points.add(node.p);
+            }
+        }
+        return points;
     }
 
     public void insert(Point2D p) {

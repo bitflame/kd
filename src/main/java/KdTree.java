@@ -330,7 +330,9 @@ public class KdTree {
         double lo = rect.ymin();
         double hi = rect.ymax();
         while (x != null) {
-            if (x.intersects(lo, hi)) intersectingNodes.enqueue(x);// I should collect y intervals instead of nodes here
+            if (x.intersects(lo, hi)) intersectingNodes.enqueue(x);
+            /* I need to collect y intervals above, and then in range() below I can check to see if rect.contains()
+            * any points with the x coordinate that came off priority queue */
             else if (x.left == null) x = x.right;
             else if (x.left.maximumX < lo) x = x.right;
             else x = x.left;

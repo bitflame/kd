@@ -372,7 +372,7 @@ public class KdTree {
          * tests with tailored values in all quadrants, and quadrants within and outside them  */
         RectHV left;
         if (!x.parent.orientation) {
-            left = new RectHV(x.parent.minXInter, x.parent.minYInter, x.parent.p.x(), x.parent.maxYInter) ;
+            left = new RectHV(x.parent.minXInter, x.parent.minYInter, x.parent.p.x(), x.parent.maxYInter);
 // add the try statement here and if maximums are less than minimums, throw an error
             x.minXInter = x.parent.minXInter;
             x.minYInter = x.parent.minYInter;

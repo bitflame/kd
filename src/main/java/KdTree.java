@@ -361,25 +361,30 @@ public class KdTree {
         root = insert(root, newNode);
     }
 
+    /* for tracking rectangle intervals
+        double minXInter = 0.0;
+        double maxXInter = 1.0;
+        double minYInter = 0.0;
+        double maxYInter = 1.0; */
     private void setLeftRectIntervals(Node x) {
         /// todo - Change this later to just double values once you no longer get xmin > xmax and ymin > ymax errors
         /* Use the values in the video for testing to make sure you get the same results. Also create your own
          * tests with tailored values in all quadrants, and quadrants within and outside them  */
         RectHV left;
         if (!x.parent.orientation) {
-            left = new RectHV(x.parent.minXInter, x.parent.minYInter, x.parent.p.x(), x.parent.maximumY);
+            left = new RectHV(x.parent.minXInter, x.parent.minYInter, x.parent.p.x(), x.parent.maxYInter) ;
 // add the try statement here and if maximums are less than minimums, throw an error
             x.minXInter = x.parent.minXInter;
             x.minYInter = x.parent.minYInter;
-            x.maximumX = x.parent.p.x();
-            x.maximumY = x.parent.maximumY;
+            x.maxXInter = x.parent.p.x();
+            x.maxYInter = x.parent.maxYInter;
         } else {
-            left = new RectHV(x.parent.minXInter, x.parent.minYInter, x.parent.maximumX, x.parent.p.y());
+            left = new RectHV(x.parent.minXInter, x.parent.minYInter, x.parent.maxXInter, x.parent.p.y());
             // add the try statement here and if maximums are less than minimums, throw an error
             x.minXInter = x.parent.minXInter;
             x.minYInter = x.parent.minYInter;
-            x.maximumX = x.parent.maximumX;
-            x.maximumY = x.parent.p.y();
+            x.maxXInter = x.parent.maxXInter;
+            x.maxYInter = x.parent.p.y();
         }
     }
 
@@ -387,21 +392,21 @@ public class KdTree {
         RectHV right;
         if (!x.parent.orientation) {
             // horizontal node
-            right = new RectHV(x.parent.p.x(), x.parent.minYInter, x.parent.maximumX, x.parent.maximumY);
+            right = new RectHV(x.parent.p.x(), x.parent.minYInter, x.parent.maxXInter, x.parent.maxYInter);
 
             // add the try statement here and if maximums are less than minimums, throw an error
             x.minXInter = x.parent.p.x();
             x.minYInter = x.parent.minYInter;
-            x.maximumX = x.parent.maximumX;
-            x.maximumY = x.parent.maximumY;
+            x.maxXInter = x.parent.maxXInter;
+            x.maxYInter = x.parent.maxYInter;
         } else {
             // vertical node
-            right = new RectHV(x.parent.minXInter, x.parent.p.y(), x.parent.maximumX, x.parent.maximumY);
+            right = new RectHV(x.parent.minXInter, x.parent.p.y(), x.parent.maxXInter, x.parent.maxYInter);
             // add the try statement here and if maximums are less than minimums, throw an error
             x.minXInter = x.parent.minXInter;
             x.minYInter = x.parent.p.y();
-            x.maximumX = x.parent.maximumX;
-            x.maximumY = x.parent.maximumY;
+            x.maxXInter = x.parent.maxXInter;
+            x.maxYInter = x.parent.maxYInter;
         }
     }
 
@@ -584,9 +589,24 @@ public class KdTree {
     }
 
     public static void main(String[] args) {
-//        int increment = 3;
-//        Point2D p = null;
+        /* Test all the files to see if they load ok, and seem to produce the right rectangles and etc. */
+
         KdTree kdtree = new KdTree();
+        String filename = args[0];
+        In in = new In(filename);
+        while (!in.isEmpty()) {
+            double x = in.readDouble();
+            double y = in.readDouble();
+            Point2D p = new Point2D(x, y);
+            kdtree.insert(p);
+        }
+        RectHV r = new RectHV(0.48, 0.28, 0.50, 0.31);
+        StdOut.println("Here are the points in the above rectangle: ");
+        for (Point2D p : kdtree.range(r)) {
+            StdOut.println(" : " + p);
+        }
+        //        int increment = 3;
+//        Point2D p = null;
 //        for (int i = 0; i < 100; i++) {
 //            p = new Point2D(StdRandom.uniform(0.0, 1.0), StdRandom.uniform(0.0, 1.0));
 //            kdtree.insert(p);
@@ -594,8 +614,7 @@ public class KdTree {
 //        RectHV r = new RectHV(0.1, 0.1, 0.8, 0.6);
 //        StdOut.println("Rectangle: " + r + "Contains points: " + kdtree.range(r));
 
-        String filename = args[0];
-        In in = new In(filename);
+
 //        PointSET brute = new PointSET();
 //
 //        int counter = 0;
@@ -609,30 +628,23 @@ public class KdTree {
 //            //StdOut.printf("%2.2f%n",node.maximumX);
 //            StdOut.println("Here is the point: " + node.p + "Here is its maximum x: " + node.maximumX);
 //        }
-        while (!in.isEmpty()) {
-            double x = in.readDouble();
-            double y = in.readDouble();
-            Point2D p = new Point2D(x, y);
-            kdtree.insert(p);
-            // StdOut.println(kdtree.root+""+kdtree.root.maximumX);
+
+        // StdOut.println(kdtree.root+""+kdtree.root.maximumX);
 //            brute.insert(p);
-            // counter++;
-            // StdOut.println(counter+" th number was just inserted.");
+        // counter++;
+        // StdOut.println(counter+" th number was just inserted.");
 //            StdOut.println();
 //            kdtree.printLevelOrder();
-        }
+
 
         // kdtree.ensureOrder();
         //RectHV r = new RectHV(0.1, 0.1, 0.5, 0.7);
-        RectHV r = new RectHV(0.48, 0.28, 0.50, 0.31);
+
         // Stopwatch st = new Stopwatch();
         // kdtree.range(r);
         // double rangeElapsedTime = st.elapsedTime();
 //        StdOut.println("Here are the points in rectangle " + r);
-        StdOut.println("Here are the points in the above rectangle: ");
-        for (Point2D p : kdtree.range(r)) {
-            StdOut.println(" : " + p);
-        }
+
         // StdOut.println("Kd range() took " + rangeElapsedTime + " seconds.");
         // StdOut.printf("Kd range() took %20.6f%n", rangeElapsedTime);
         // kdtree.draw();

@@ -47,6 +47,7 @@ class KdTreeTest {
         }
     }
 */
+    /* Create another parameterized test for setting the left and right rectangles to see if they work */
     @ParameterizedTest
     @CsvFileSource(resources = "troubleshoot.txt", delimiterString = " ")
     void insertShouldWork(double x, double y) {

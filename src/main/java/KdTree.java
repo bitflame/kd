@@ -28,7 +28,8 @@ public class KdTree {
     private double ymax;
     private MinPQ<Double> xCoordinates = new MinPQ<>();
     BST<Double, Double> intervalSearchTree = new BST<Double, Double>();
-    /* private class IntervalST<Key extends Comparable<Key>, Value> {
+
+    private class IntervalST<Key extends Comparable<Key>, Value> {
         private Node root;
         Queue<Value> Q = new Queue<>();
 
@@ -118,14 +119,14 @@ public class KdTree {
             return intersects(root, lo, hi);
         }
 
-        Here is the code for intersects:
+        /* Here is the code for intersects:
         public boolean intersects(RectHV that) {
             return this.xmax >= that.xmin && this.ymax >= that.ymin
                     && that.xmax >= this.xmin && that.ymax >= this.ymin;
-        }
+        } */
 
         /// todo - Needs implementing
-        private Iterable<Value> intersects( Key lo, Key hi) {
+        private Iterable<Value> intersects( Node x, Key lo, Key hi) {
             return Q;
         }
 
@@ -353,7 +354,7 @@ public class KdTree {
             x = nodesPriorityQueue.delMin();
             /* add the y interval of the node's rectangle to a bst and check to see if there are any intersections
             in the bst */
-            if (x.maxYInter >= lo && hi >= x.minYInter) { // if x interval intersects the query interval
+            if (x.maxXInter >= lo && hi >= x.minXInter) { // if x interval intersects the query interval
                 StdOut.println("If you see this statement more than once, you are matching more than one node. " +
                         "change the code to collect all of them in an array list or something so you can do a range " +
                         "search / recursive lookup of the points you find here.");
@@ -375,7 +376,12 @@ public class KdTree {
             nodesPriorityQueue.insert(n);
             xCoordinates.insert(n.p.x()); // just trying to see if I can do this with just x coordinate
         }
-        getIntersectingSegments(rect);
+        Node intRect=getIntersectingSegments(rect);
+        while(intRect!=null) {
+            // add the y interval of the node's rectangle to a search tree
+            intRect=getIntersectingSegments(rect);
+        }
+
         StdOut.println("Created a priority queue of nddes ");
         points.add(x.p);
         return points;

@@ -10,7 +10,14 @@ public class KdTree {
     private Queue<Node> q = new Queue<>();
 
     private ArrayList<Point2D> points = new ArrayList<>();
-    private Queue<Node> intersectingNodes = new Queue<>();
+    MinPQ<Node> nodesPriorityQueue = new MinPQ<Node>(new Comparator<Node>() {
+        @Override
+        public int compare(Node o1, Node o2) {
+            if (o1.minXInter > o2.minXInter) return 1;
+            else if (o2.minXInter > o1.minXInter) return -1;
+            return 0;
+        }
+    });
     private RectHV rHl = null;
     private RectHV rHr = null;
     private double x;
@@ -323,36 +330,57 @@ public class KdTree {
         return points;
     }
 
-    private Iterable<Node> getIntersectingNodes(Node x, RectHV rect) {
+    private Node getIntersectingSegments(RectHV rect) {
         /* Get x from xCoordinates and see if it intersects with rect's lo and hi. lo=rect.miny() and hi= rect.maxy()
          * Also; instead of returning x, collect all of the intersecting nodes in an array list or something in case
          * there is more than one, and check them out. If */
+        /*Here is the code for intersects
+        public boolean intersects(RectHV that) {
+            return this.xmax >= that.xmin && this.ymax >= that.ymin
+                    && that.xmax >= this.xmin && that.ymax >= this.ymin;
+        }*/
         double lo = rect.ymin();
         double hi = rect.ymax();
-        while (x != null) {
-            if (x.intersects(lo, hi)) intersectingNodes.enqueue(x);
-            /* I need to collect y intervals above, and then in range() below I can check to see if rect.contains()
-            * any points with the x coordinate that came off priority queue */
+        Node x = null;
+        while (!nodesPriorityQueue.isEmpty()) {
+            x = nodesPriorityQueue.delMin();
+            if (x.minXInter >= lo && hi >= x.minXInter) { // if x interval intersects the query interval
+                StdOut.println("If you see this statement more than once, you are matching more than one node. " +
+                        "change the code to collect all of them in an array list or something so you can do a range " +
+                        "search / recursive lookup of the points you find here.");
+                return x;
+            }
+            /* The original code calls for returning x.interval but I believe interval is x's rectangle's ymax - ymin
+             * which this implementation would provide, and I do not have a specific implementation for interval yet and
+             * for me it seems to be more work later to convert the interval to what I can use. */
             else if (x.left == null) x = x.right;
             else if (x.left.maximumX < lo) x = x.right;
             else x = x.left;
         }
-        return intersectingNodes;
+        return null;
     }
 
-    public Iterable<Point2D> range(Node x, RectHV rect) {
-        for (Node n: intersectingNodes) {
-            for (Node node: keys(n)){
-                if (rect.contains(node.p)) points.add(node.p);
+    /*    MinPQ<SearchNode> currentPriorityQueue = new MinPQ<SearchNode>(new Comparator<SearchNode>() {
+            @Override
+            public int compare(SearchNode o1, SearchNode o2) {
+                if (o1.prevSearchNode.numOfMoves + 1 + o1.manhattan
+                        > o2.prevSearchNode.numOfMoves + 1 + o2.manhattan) return 1;
+                else if (o2.prevSearchNode.numOfMoves + 1 + o2.manhattan >
+                        o1.prevSearchNode.numOfMoves + 1 + o1.manhattan) return -1;
+                else return 0;
             }
-        }
+        });*/
+    public Iterable<Point2D> range(Node x, RectHV rect) {
+
+        for (Node n : keys()) nodesPriorityQueue.insert(n);
+        getIntersectingSegments(rect);
+        StdOut.println("Created a priority queue of nddes ");
         return points;
     }
 
     public void insert(Point2D p) {
         if (p == null) throw new IllegalArgumentException("You can not insert null object" +
                 "into the tree");
-        xCoordinates.insert(p.x());
         Node newNode = new Node(p, 1, false, null);
         newNode.maximumX = p.x();
         root = insert(root, newNode);

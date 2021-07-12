@@ -8,7 +8,6 @@ import java.util.Comparator;
 public class KdTree {
     private Node root;
     private Queue<Node> q = new Queue<>();
-
     private ArrayList<Point2D> points = new ArrayList<Point2D>();
     MinPQ<Node> nodesPriorityQueue = new MinPQ<Node>(new Comparator<Node>() {
         @Override
@@ -304,6 +303,30 @@ public class KdTree {
         return q;
     }
 
+    public Node select(int k) {
+        return select(root, k);
+    }
+
+    private Node select(Node x, int k) {
+        if (x == null) return null;
+        int t = size(x.left);
+        if (t > k) return select(x.left, k);
+        else if (t < k) return select(x.right, k - t - 1);
+        else return x;
+    }
+
+    public int rank(Node lo) {
+        return rank(lo, root);
+    }
+
+    private int rank(Node lo, Node x) {
+        if (x == null) return 0;
+        int cmp = lo.compareTo(x);
+        if (cmp < 0) return rank(lo, x.left);
+        else if (cmp > 0) return 1 + size(x.left) + rank(lo, x.right);
+        else return size(x.left);
+    }
+
     public boolean contains(Point2D p) {
         return get(p) != null;
     }
@@ -373,10 +396,24 @@ public class KdTree {
         double currentX;
         currentX = xCoordinates.delMin();
         while (!xCoordinates.isEmpty()) {
+
             if (currentX == h.minXInter) {
                 /* I did not see how this next line would work out until I wrote the code! Kept thinking how to get
-                * the y coordinate if I only had x's and vise versa ! wow */
+                 * the y coordinate if I only had x's and vise versa ! wow */
                 intervalSearchTree.put(h.minYInter, h.maxXInter, currentX);
+                if (intervalSearchTree.intersects(lo, hi) != null) {
+                    // do a range search for all the points something like for(Points p: Keys(currentx,lo)-(currentx,hi)
+                    Point2D start = new Point2D(currentX, lo);
+                    Point2D end = new Point2D(currentX, hi);
+                    /* I may be able to get the rank() for the points (currentX,lo) and (currentX,hi) and then say
+                    select() the nodes above the rank((currentX,lo)) and below the rank((currentX,hi)). I may still
+                    have to check to see if rect contains them. At least the first time I test, to make sure this
+                    method works, and then remove the test. I also have to test the rank() and select methods of KdTree
+                    I jsut fixed the compile errors. I am not sure if they work the way they should */
+
+                }
+            } else if (currentX == h.maxXInter) {
+                intervalSearchTree.delete(h.minYInter, h.maxXInter);
             }
             currentX = xCoordinates.delMin();
         }
@@ -393,6 +430,7 @@ public class KdTree {
                 "into the tree");
         Node newNode = new Node(p, 1, false, null);
         newNode.maximumX = p.x();
+        xCoordinates.insert(p.x());
         root = insert(root, newNode);
     }
 
@@ -454,12 +492,14 @@ public class KdTree {
             if (cmp < 0) {  // It means root is smaller than the new node
                 newNode.parent = h;
                 setRightRectIntervals(newNode);
+                xCoordinates.insert(newNode.p.x());
                 h.right = insert(h.right, newNode);
                 h.maximumX = Math.max(h.maximumX, h.right.maximumX);
                 h.maximumY = Math.max(h.maximumY, h.right.maximumY);
             } else if (cmp > 0) {  // it means root is larger than the new node
                 newNode.parent = h;
                 setLeftRectIntervals(newNode);
+                xCoordinates.insert(newNode.p.x());
                 h.left = insert(h.left, newNode);
                 h.maximumX = Math.max(h.maximumX, h.left.maximumX);
                 h.maximumY = Math.max(h.maximumY, h.left.maximumY);
@@ -491,7 +531,12 @@ public class KdTree {
 
     public int size() {
         if (root == null) return 0;
-        else return root.N;
+        // else return root.N;
+        else return size(root);
+    }
+
+    private int size(Node x) {
+        return size(x.left) + size(x.right) + 1;
     }
 
     public Point2D nearest(Point2D p) {
@@ -636,6 +681,7 @@ public class KdTree {
         }
         RectHV r = new RectHV(0.48, 0.28, 0.50, 0.31);
         StdOut.println("Here are the points in the above rectangle: ");
+        kdtree.range(r);
 //        for (Point2D p : kdtree.range(r)) {
 //            StdOut.println(" : " + p);
 //        }

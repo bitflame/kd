@@ -1,32 +1,195 @@
+
 import edu.princeton.cs.algs4.*;
 
 import java.util.ArrayList;
+import java.util.Comparator;
+
 
 public class kd2 {
-
     private Node root;
     private Queue<Node> q = new Queue<>();
-    private ArrayList<Point2D> points = new ArrayList<>();
-    private Queue<Node> intersectingNodes = new Queue<>();
+
+    private ArrayList<Point2D> points = new ArrayList<Point2D>();
+    MinPQ<Node> nodesPriorityQueue = new MinPQ<Node>(new Comparator<Node>() {
+        @Override
+        public int compare(Node o1, Node o2) {
+            if (o1.minXInter > o2.minXInter) return 1;
+            else if (o2.minXInter > o1.minXInter) return -1;
+            return 0;
+        }
+    });
     private RectHV rHl = null;
     private RectHV rHr = null;
-    double x;
-    double y;
+    private double x;
+    private double y;
+    private double xmin;
+    private double ymin;
+    private double xmax;
+    private double ymax;
+    private MinPQ<Double> xCoordinates = new MinPQ<>();
+    BST<Double, Double> intervalSearchTree = new BST<Double, Double>();
 
+    /* private class IntervalST<Key extends Comparable<Key>, Value> {
+        private Node root;
+        Queue<Value> Q = new Queue<>();
+
+        private class Node {
+            private Key lo;
+            private Key hi;
+            private Value val;
+            private Node left, right;
+            private int N;
+
+            public Node(Key high, Key low, Value value) {
+                this.lo = low;
+                this.hi = high;
+                this.val = value;
+            }
+        }
+
+        void put(Key lo, Key hi, Value val) {
+            root = put(root, lo, hi, val);
+        }
+
+        private Node put(Node x, Key lo, Key hi, Value value) {
+            if (x == null) return new Node(lo, hi, value);
+            int cmp = lo.compareTo(x.lo);
+            if (cmp < 0) x.left = put(x.left, lo, hi, value);
+            if (cmp > 0) x.right = put(x.right, lo, hi, value);
+            else x.val = value;
+            x.N = size(x.left) + size(x.right) + 1;
+            return x;
+        }
+
+        public int size() {
+            return size(root);
+        }
+
+        private int size(Node x) {
+            if (x == null) return 0;
+            else return x.N;
+        }
+
+        Value get(Key lo, Key hi) {
+            return get(root, lo, hi);
+        }
+
+        private Value get(Node x, Key lo, Key hi) {
+            if (x == null) return null;
+            int cmp = lo.compareTo(x.lo);
+            if (cmp < 0) return get(x.left, lo, hi);
+            else if (cmp > 0) return get(x.right, lo, hi);
+            else return x.val;
+        }
+
+        void delete(Key lo, Key hi) {
+            root = delete(root, lo, hi);
+        }
+
+        private Node delete(Node x, Key lo, Key hi) {
+            if (x == null) return null;
+            int cmp = lo.compareTo(x.lo);
+            if (cmp < 0) x.left = delete(x.left, lo, hi);
+            else if (cmp > 0) x.right = delete(x.right, lo, hi);
+            else {
+                if (x.right == null) return x.left;
+                if (x.left == null) return x.right;
+                Node t = x;
+                x = min(t.right);
+                x.right = deleteMin(t.right);
+                x.left = t.left;
+            }
+            x.N = size(x.left) + size(x.right) + 1;
+            return x;
+        }
+
+        public void deleteMin() {
+            root = deleteMin(root);
+        }
+
+
+        private Node deleteMin(Node x) {
+            if (x.left == null) return x.right;
+            x.left = deleteMin(x.left);
+            x.N = size(x.left) + size(x.right) + 1;
+            return x;
+        }
+
+        Iterable<Value> intersects(Key lo, Key hi) {
+            return intersects(root, lo, hi);
+        }
+
+        /// todo - Needs implementing
+        private Iterable<Value> intersects( Node x, Key lo, Key hi) {
+            return Q;
+
+        }
+
+        public Key select(int k) {
+            return select(root, k).lo;
+        }
+
+        private Node select(Node x, int k) {
+            if (x == null) return null;
+            int t = size(x.left);
+            if (t > k) return select(x.left, k);
+            else if (t < k) return select(x.right, k - t - 1);
+            else return x;
+        }
+
+        public int rank(Key lo) {
+            return rank(lo, root);
+        }
+
+        private int rank(Key lo, Node x) {
+            if (x == null) return 0;
+            int cmp = lo.compareTo(x.lo);
+            if (cmp < 0) return rank(lo, x.left);
+            else if (cmp > 0) return 1 + size(x.left) + rank(lo, x.right);
+            else return size(x.left);
+        }
+
+        public Key min() {
+            return min(root).lo;
+        }
+
+        private Node min(Node x) {
+            if (x.left == null) return x;
+            return min(x.left);
+        }
+
+        private Node floor(Node x, Key lo) {
+            if (x == null) return null;
+            int cmp = lo.compareTo(x.lo);
+            if (cmp == 0) return x;
+            if (cmp < 0) return floor(x.left, lo);
+            Node t = floor(x.right, lo);
+            if (t != null) return t;
+            else return x;
+        }
+    } */
+
+    /************************************* End of Interval Search Tree **********************************/
     private static class Node implements Comparable<Node> {
         Point2D p; // key
         Node left, right, parent; // subtrees
-        int n; // # nodes in this subtree
+        int N; // # nodes in this subtree
         boolean orientation; // 0 means horizontal
         RectHV nodeRect;
+        // maximum values in each tree
         double maximumX = 0.0;
         double maximumY = 0.0;
+        // for tracking rectangle intervals
+        double minXInter = 0.0;
+        double maxXInter = 1.0;
+        double minYInter = 0.0;
+        double maxYInter = 1.0;
 
         public Node(Point2D p, int n, boolean coordinate, Node parent) {
             this.p = p;
             this.orientation = coordinate;
             this.parent = parent;
-            this.n = n;
+            this.N = n;
             this.nodeRect = null;
         }
 
@@ -38,24 +201,30 @@ public class kd2 {
             double hY = h.p.y();
             if (!this.orientation) {
                 if (thisX < hX) {
-                    h.orientation = true;
                     return -1;
                 } else {
-                    h.orientation = true;
                     return 1;
                 }
             }
             if (this.orientation) {
                 if (thisY < hY) {
-                    h.orientation = false;
                     return -1;
                 } else {
-                    h.orientation = false;
                     return 1;
                 }
             }
             return 1;
         }
+
+        /*Here is the code for intersects
+        public boolean intersects(RectHV that) {
+            return this.xmax >= that.xmin && this.ymax >= that.ymin
+                    && that.xmax >= this.xmin && that.ymax >= this.ymin;
+        }
+        private boolean intersects(double lo, double hi) {
+            if (this.maxYInter >= lo && hi >= this.minYInter) return true;
+            return false;
+        }*/
     }
 
     public void draw() {
@@ -139,48 +308,83 @@ public class kd2 {
         return get(p) != null;
     }
 
+    /*  private Node floor(Node x, Key lo) {
+          if (x == null) return null;
+          int cmp = lo.compareTo(x.lo);
+          if (cmp == 0) return x;
+          if (cmp < 0) return floor(x.left, lo);
+          Node t = floor(x.right, lo);
+          if (t != null) return t;
+          else return x;
+          Here is the code for intersects
+          public boolean intersects(RectHV that) {
+          return this.xmax >= that.xmin && this.ymax >= that.ymin
+              && that.xmax >= this.xmin && that.ymax >= this.ymin;
+      }
+      } */
+
+    private Node getIntersectingSegments(RectHV rect) {
+        /* Get x from xCoordinates and see if it intersects with rect's lo and hi. lo=rect.miny() and hi= rect.maxy()
+         * Also; instead of returning x, collect all of the intersecting nodes in an array list or something in case
+         * there is more than one, and check them out. If */
+        /*Here is the code for intersects
+        public boolean intersects(RectHV that) {
+            return this.xmax >= that.xmin && this.ymax >= that.ymin
+                    && that.xmax >= this.xmin && that.ymax >= this.ymin;
+        }*/
+
+        double lo = rect.ymin();
+        double hi = rect.ymax();
+        Node x = null;
+        while (!nodesPriorityQueue.isEmpty()) {
+            x = nodesPriorityQueue.delMin();
+            /* add the y interval of the node's rectangle to a bst and check to see if there are any intersections
+            in the bst */
+            if (x.maxXInter >= lo && hi >= x.minXInter) { // if x interval intersects the query interval
+                StdOut.println("If you see this statement more than once, you are matching more than one node. " +
+                        "change the code to collect all of them in an array list or something so you can do a range " +
+                        "search / recursive lookup of the points you find here.");
+                return x;
+            }
+            /* The original code calls for returning x.interval but I believe interval is x's rectangle's ymax - ymin
+             * which this implementation would provide, and I do not have a specific implementation for interval yet and
+             * for me it seems to be more work later to convert the interval to what I can use. */
+            else if (x.left == null) x = x.right;
+            else if (x.left.maximumX < lo) x = x.right;
+            else x = x.left;
+        }
+        return null;
+    }
+
     public Iterable<Point2D> range(RectHV rect) {
+
         if (rect == null) throw new IllegalArgumentException("rectangle has to be a valid " +
                 "object. ");
-        for (Node node : range(root, rect)) {
-            points.add(node.p);
-        }
+        range(root, rect);
         return points;
     }
 
-    private Iterable<Node> range(Node h, RectHV rect) {
-        // check if point in node lies in given rectangle, if so, you are done
-        if (rect.contains(h.p)) {
-            intersectingNodes.enqueue(h);
-            return intersectingNodes;
+
+    private Iterable<Point2D> range(Node x, RectHV rect) {
+
+        for (Node n : keys()) {
+            nodesPriorityQueue.insert(n);
+            xCoordinates.insert(n.p.x()); // just trying to see if I can do this with just x coordinate
         }
-        /* I might have to acitvate this and test it. The code below is likely to be more accurate and test
-        better while more effecient ...
-        if (!h.orientation) { // Horizontal / x-axis
-            if (h.left != null && rect.xmin() < h.left.maximumX) {
-                range(h.left, rect);
-            }
-            if (h.right != null && rect.xmin() < h.right.maximumX) {
-                range(h.right, rect);
-            }
-        } else if (h.orientation) { // vertical node - y axis
-            if (h.left != null && rect.ymin() < h.left.maximumY) {
-                range(h.left, rect);
-            }
-            if (h.right != null && rect.ymin() < h.right.maximumY) {
-                range(h.right, rect);
-            }
-        }*/
-        /* */
-        if (h.left != null && (rect.xmin() < h.left.maximumX || rect.ymin() < h.left.maximumY)) {
-            range(h.left, rect);
+        Node intNode = getIntersectingSegments(rect);
+        /* intNode is a Node whose rectangle intersects with the rectangle we are interested in finding out the points
+         * within */
+        Point2D p = null;
+        while (intNode != null) {
+            for (Node n : keys(intNode))
+                p = n.p;
+            if (rect.contains(p)) points.add(p);
+            intNode = getIntersectingSegments(rect);
         }
-        if (h.right != null && (rect.xmin() < h.right.maximumX || rect.ymin() < h.right.maximumY)) {
-            range(h.right, rect);
-        }
-        if (h.left != null) range(h.left, rect);
-        if (h.right != null) range(h.right, rect);
-        return intersectingNodes;
+
+        StdOut.println("Created a priority queue of nddes ");
+        points.add(x.p);
+        return points;
     }
 
     public void insert(Point2D p) {
@@ -188,24 +392,74 @@ public class kd2 {
                 "into the tree");
         Node newNode = new Node(p, 1, false, null);
         newNode.maximumX = p.x();
-        newNode.maximumY = p.y();
         root = insert(root, newNode);
+    }
+
+    /* for tracking rectangle intervals
+        double minXInter = 0.0;
+        double maxXInter = 1.0;
+        double minYInter = 0.0;
+        double maxYInter = 1.0; */
+    private void setLeftRectIntervals(Node x) {
+        /// todo - Change this later to just double values once you no longer get xmin > xmax and ymin > ymax errors
+        /* Use the values in the video for testing to make sure you get the same results. Also create your own
+         * tests with tailored values in all quadrants, and quadrants within and outside them  */
+        RectHV left;
+        if (!x.parent.orientation) {
+            left = new RectHV(x.parent.minXInter, x.parent.minYInter, x.parent.p.x(), x.parent.maxYInter);
+// add the try statement here and if maximums are less than minimums, throw an error
+            x.minXInter = x.parent.minXInter;
+            x.minYInter = x.parent.minYInter;
+            x.maxXInter = x.parent.p.x();
+            x.maxYInter = x.parent.maxYInter;
+        } else {
+            left = new RectHV(x.parent.minXInter, x.parent.minYInter, x.parent.maxXInter, x.parent.p.y());
+            // add the try statement here and if maximums are less than minimums, throw an error
+            x.minXInter = x.parent.minXInter;
+            x.minYInter = x.parent.minYInter;
+            x.maxXInter = x.parent.maxXInter;
+            x.maxYInter = x.parent.p.y();
+        }
+    }
+
+    private void setRightRectIntervals(Node x) {
+        RectHV right;
+        if (!x.parent.orientation) {
+            // horizontal node
+            right = new RectHV(x.parent.p.x(), x.parent.minYInter, x.parent.maxXInter, x.parent.maxYInter);
+
+            // add the try statement here and if maximums are less than minimums, throw an error
+            x.minXInter = x.parent.p.x();
+            x.minYInter = x.parent.minYInter;
+            x.maxXInter = x.parent.maxXInter;
+            x.maxYInter = x.parent.maxYInter;
+        } else {
+            // vertical node
+            right = new RectHV(x.parent.minXInter, x.parent.p.y(), x.parent.maxXInter, x.parent.maxYInter);
+            // add the try statement here and if maximums are less than minimums, throw an error
+            x.minXInter = x.parent.minXInter;
+            x.minYInter = x.parent.p.y();
+            x.maxXInter = x.parent.maxXInter;
+            x.maxYInter = x.parent.maxYInter;
+        }
     }
 
     private Node insert(Node h, Node newNode) {
         if (h == null) {
             return newNode;
         } else {
+            newNode.orientation = !h.orientation;
             int cmp = h.compareTo(newNode);
-            /* I think I just save maximum X to know which branches to visit, Y orientation ranges are saved
-             * in a separate tree to keep track of which intervals were covered. */
-            if (cmp < 0) {
+            if (cmp < 0) {  // It means root is smaller than the new node
                 newNode.parent = h;
+                setRightRectIntervals(newNode);
                 h.right = insert(h.right, newNode);
                 h.maximumX = Math.max(h.maximumX, h.right.maximumX);
                 h.maximumY = Math.max(h.maximumY, h.right.maximumY);
-            } else if (cmp > 0) {
+
+            } else if (cmp > 0) {  // it means root is larger than the new node
                 newNode.parent = h;
+                setLeftRectIntervals(newNode);
                 h.left = insert(h.left, newNode);
                 h.maximumX = Math.max(h.maximumX, h.left.maximumX);
                 h.maximumY = Math.max(h.maximumY, h.left.maximumY);
@@ -213,17 +467,17 @@ public class kd2 {
         }
         int leftN = 0;
         if (h.left != null) {
-            leftN = h.left.n;
+            leftN = h.left.N;
             h.maximumX = Math.max(h.maximumX, h.left.maximumX);
             h.maximumY = Math.max(h.maximumY, h.left.maximumY);
         }
         int rightN = 0;
         if (h.right != null) {
-            rightN = h.right.n;
+            rightN = h.right.N;
             h.maximumX = Math.max(h.maximumX, h.right.maximumX);
             h.maximumY = Math.max(h.maximumY, h.right.maximumY);
         }
-        h.n = leftN + rightN + 1;
+        h.N = leftN + rightN + 1;
         if (h.right != null) {
             h.maximumX = Math.max(h.maximumX, h.right.maximumX);
             h.maximumY = Math.max(h.maximumY, h.right.maximumY);
@@ -237,7 +491,7 @@ public class kd2 {
 
     public int size() {
         if (root == null) return 0;
-        else return root.n;
+        else return root.N;
     }
 
     public Point2D nearest(Point2D p) {
@@ -369,9 +623,24 @@ public class kd2 {
     }
 
     public static void main(String[] args) {
-//        int increment = 3;
+        /* Test all the files to see if they load ok, and seem to produce the right rectangles and etc. */
+
+        KdTree kdtree = new KdTree();
+        String filename = args[0];
+        In in = new In(filename);
+        while (!in.isEmpty()) {
+            double x = in.readDouble();
+            double y = in.readDouble();
+            Point2D p = new Point2D(x, y);
+            kdtree.insert(p);
+        }
+        RectHV r = new RectHV(0.48, 0.28, 0.50, 0.31);
+        StdOut.println("Here are the points in the above rectangle: ");
+//        for (Point2D p : kdtree.range(r)) {
+//            StdOut.println(" : " + p);
+//        }
+        //        int increment = 3;
 //        Point2D p = null;
-        kd2 kdtree = new kd2();
 //        for (int i = 0; i < 100; i++) {
 //            p = new Point2D(StdRandom.uniform(0.0, 1.0), StdRandom.uniform(0.0, 1.0));
 //            kdtree.insert(p);
@@ -379,8 +648,7 @@ public class kd2 {
 //        RectHV r = new RectHV(0.1, 0.1, 0.8, 0.6);
 //        StdOut.println("Rectangle: " + r + "Contains points: " + kdtree.range(r));
 
-        String filename = args[0];
-        In in = new In(filename);
+
 //        PointSET brute = new PointSET();
 //
 //        int counter = 0;
@@ -394,30 +662,23 @@ public class kd2 {
 //            //StdOut.printf("%2.2f%n",node.maximumX);
 //            StdOut.println("Here is the point: " + node.p + "Here is its maximum x: " + node.maximumX);
 //        }
-        while (!in.isEmpty()) {
-            double x = in.readDouble();
-            double y = in.readDouble();
-            Point2D p = new Point2D(x, y);
-            kdtree.insert(p);
-            // StdOut.println(kdtree.root+""+kdtree.root.maximumX);
+
+        // StdOut.println(kdtree.root+""+kdtree.root.maximumX);
 //            brute.insert(p);
-            // counter++;
-            // StdOut.println(counter+" th number was just inserted.");
+        // counter++;
+        // StdOut.println(counter+" th number was just inserted.");
 //            StdOut.println();
 //            kdtree.printLevelOrder();
-        }
+
 
         // kdtree.ensureOrder();
         //RectHV r = new RectHV(0.1, 0.1, 0.5, 0.7);
-        RectHV r = new RectHV(0.48, 0.28, 0.50, 0.31);
+
         // Stopwatch st = new Stopwatch();
         // kdtree.range(r);
         // double rangeElapsedTime = st.elapsedTime();
 //        StdOut.println("Here are the points in rectangle " + r);
-        StdOut.println("Here are the points in the above rectangle: ");
-        for (Point2D p : kdtree.range(r)) {
-            StdOut.println(" : " + p);
-        }
+
         // StdOut.println("Kd range() took " + rangeElapsedTime + " seconds.");
         // StdOut.printf("Kd range() took %20.6f%n", rangeElapsedTime);
         // kdtree.draw();
@@ -508,10 +769,11 @@ public class kd2 {
 //        StdOut.println("Finished w/o errors.");
 //        int index = 1;
 //        for (Node n : k.keys()) {
-//            if (n.orientation == true) {
+//            if (n.coordinate == true) {
 //                StdOut.println(index + "-" + n.p);
 //                index++;
 //            }
 //        }
     }
 }
+

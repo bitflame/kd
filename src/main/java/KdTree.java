@@ -27,7 +27,7 @@ public class KdTree {
     private double xmax;
     private double ymax;
     private MinPQ<Double> xCoordinates = new MinPQ<>();
-    BST<Double, Double> intervalSearchTree = new BST<Double, Double>();
+    IntervalST<Double, Double> intervalSearchTree = new IntervalST();
 
     private class IntervalST<Key extends Comparable<Key>, Value> {
         private Node root;
@@ -119,14 +119,8 @@ public class KdTree {
             return intersects(root, lo, hi);
         }
 
-        /* Here is the code for intersects:
-        public boolean intersects(RectHV that) {
-            return this.xmax >= that.xmin && this.ymax >= that.ymin
-                    && that.xmax >= this.xmin && that.ymax >= this.ymin;
-        } */
-
         /// todo - Needs implementing
-        private Iterable<Value> intersects( Node x, Key lo, Key hi) {
+        private Iterable<Value> intersects(Node x, Key lo, Key hi) {
             return Q;
 
         }
@@ -329,15 +323,6 @@ public class KdTree {
       }
       } */
 
-
-    public Iterable<Point2D> range(RectHV rect) {
-
-        if (rect == null) throw new IllegalArgumentException("rectangle has to be a valid " +
-                "object. ");
-        range(root, rect);
-        return points;
-    }
-
     private Node getIntersectingSegments(RectHV rect) {
         /* Get x from xCoordinates and see if it intersects with rect's lo and hi. lo=rect.miny() and hi= rect.maxy()
          * Also; instead of returning x, collect all of the intersecting nodes in an array list or something in case
@@ -371,20 +356,35 @@ public class KdTree {
         return null;
     }
 
-    private Iterable<Point2D> range(Node x, RectHV rect) {
+    public Iterable<Point2D> range(RectHV rect) {
 
-        for (Node n : keys()) {
-            nodesPriorityQueue.insert(n);
-            xCoordinates.insert(n.p.x()); // just trying to see if I can do this with just x coordinate
-        }
-        Node intRect=getIntersectingSegments(rect);
-        while(intRect!=null) {
-            // add the y interval of the node's rectangle to a search tree
-            intRect=getIntersectingSegments(rect);
+        if (rect == null) throw new IllegalArgumentException("rectangle has to be a valid " +
+                "object. ");
+        range(root, rect);
+        return points;
+    }
+
+
+    private Iterable<Point2D> range(Node h, RectHV rect) {
+        /* Maybe interval search refers to the rectangle's interval i.e. first you find all the rectangles that intersect
+        with rect, then you do an sliding interval search for points that are between its minx,miny, maxx, & maxy */
+        double lo = rect.ymin();
+        double hi = rect.ymax();
+        double currentX;
+        currentX = xCoordinates.delMin();
+        while (!xCoordinates.isEmpty()) {
+            if (currentX == h.minXInter) {
+                /* I did not see how this next line would work out until I wrote the code! Kept thinking how to get
+                * the y coordinate if I only had x's and vise versa ! wow */
+                intervalSearchTree.put(h.minYInter, h.maxXInter, currentX);
+            }
+            currentX = xCoordinates.delMin();
         }
 
-        StdOut.println("Created a priority queue of nddes ");
-        points.add(x.p);
+        if ((h.minXInter < rect.xmin()) || (h.maxXInter < rect.xmax())) {
+            intervalSearchTree.put(h.minYInter, h.maxXInter, h.p.x());
+        }
+
         return points;
     }
 
@@ -457,7 +457,6 @@ public class KdTree {
                 h.right = insert(h.right, newNode);
                 h.maximumX = Math.max(h.maximumX, h.right.maximumX);
                 h.maximumY = Math.max(h.maximumY, h.right.maximumY);
-
             } else if (cmp > 0) {  // it means root is larger than the new node
                 newNode.parent = h;
                 setLeftRectIntervals(newNode);

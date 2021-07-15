@@ -190,20 +190,19 @@ public class KdTree {
         return get(p) != null;
     }
 
-    /*  private Node floor(Node x, Key lo) {
-          if (x == null) return null;
-          int cmp = lo.compareTo(x.lo);
-          if (cmp == 0) return x;
-          if (cmp < 0) return floor(x.left, lo);
-          Node t = floor(x.right, lo);
-          if (t != null) return t;
-          else return x;
-          Here is the code for intersects
-          public boolean intersects(RectHV that) {
-          return this.xmax >= that.xmin && this.ymax >= that.ymin
-              && that.xmax >= this.xmin && that.ymax >= this.ymin;
-      }
-      } */
+    public Node floor(Point2D p) {
+        return floor(root, p);
+    }
+
+    private Node floor(Node x, Point2D point) {
+        if (x == null) return null;
+        int cmp = x.p.compareTo(point);
+        if (cmp == 0) return x;
+        if (cmp < 0) return floor(x.left, point);
+        Node t = floor(x.right, point);
+        if (t != null) return t;
+        else return x;
+    }
 
     private Node getIntersectingSegments(RectHV rect) {
         /* Get x from xCoordinates and see if it intersects with rect's lo and hi. lo=rect.miny() and hi= rect.maxy()
@@ -220,6 +219,7 @@ public class KdTree {
         Node x = null;
         while (!nodesPriorityQueue.isEmpty()) {
             x = nodesPriorityQueue.delMin();
+
             /* add the y interval of the node's rectangle to a bst and check to see if there are any intersections
             in the bst */
             if ((x.maxXInter <= hi && x.maxXInter > lo) || (x.minXInter > lo && x.minXInter < hi)) {
@@ -228,8 +228,7 @@ public class KdTree {
                         "change the code to collect all of them in an array list or something so you can do a range " +
                         "search / recursive lookup of the points you find here.");
                 return x;
-            }
-            else if (x.left == null) x = x.right;
+            } else if (x.left == null) x = x.right;
             else if (x.left.maximumX < lo) x = x.right;
             else x = x.left;
         }
@@ -258,16 +257,25 @@ public class KdTree {
                 /* I did not see how this next line would work out until I wrote the code! Kept thinking how to get
                  * the y coordinate if I only had x's and vise versa ! wow */
                 intervalSearchTree.put(h.minYInter, h.maxXInter, currentX);
+                for (Double d : intervalSearchTree.intersects(lo, hi)) {
+                    /* d is the intersection interval, so I should check any potential area for union of points in the
+                     * rectangles */
+                    Point2D start = new Point2D(currentX, lo );
+                    Point2D end = new Point2D(currentX, hi);
+                    if (contains(start)) StdOut.println("found a point");
+                    else if (contains(end)) StdOut.println("found a point");
+                    else if (floor(end)!=null) StdOut.println("Here is what is in floor: "+floor(end).p);
+                }
                 if (intervalSearchTree.intersects(lo, hi) != null) {
                     // do a range search for all the points something like for(Points p: Keys(currentx,lo)-(currentx,hi)
-                    Point2D start = new Point2D(currentX, lo);
-                    Point2D end = new Point2D(currentX, hi);
+
                     /* I may be able to get the rank() for the points (currentX,lo) and (currentX,hi) and then say
                     select() the nodes above the rank((currentX,lo)) and below the rank((currentX,hi)). I may still
                     have to check to see if rect contains them. At least the first time I test, to make sure this
                     method works, and then remove the test. I also have to test the rank() and select methods of KdTree
-                    I jsut fixed the compile errors. I am not sure if they work the way they should */
+                    I just fixed the compile errors. I am not sure if they work the way they should */
                 }
+
             } else if (currentX == h.maxXInter) {
                 intervalSearchTree.delete(h.minYInter, h.maxXInter);
             }
@@ -342,14 +350,14 @@ public class KdTree {
             if (cmp < 0) {  // It means root is smaller than the new node
                 newNode.parent = h;
                 setRightRectIntervals(newNode);
-                xCoordinates.insert(newNode.p.x());
+                // xCoordinates.insert(newNode.p.x());
                 h.right = insert(h.right, newNode);
                 h.maximumX = Math.max(h.maximumX, h.right.maximumX);
                 h.maximumY = Math.max(h.maximumY, h.right.maximumY);
             } else if (cmp > 0) {  // it means root is larger than the new node
                 newNode.parent = h;
                 setLeftRectIntervals(newNode);
-                xCoordinates.insert(newNode.p.x());
+                // xCoordinates.insert(newNode.p.x());
                 h.left = insert(h.left, newNode);
                 h.maximumX = Math.max(h.maximumX, h.left.maximumX);
                 h.maximumY = Math.max(h.maximumY, h.left.maximumY);

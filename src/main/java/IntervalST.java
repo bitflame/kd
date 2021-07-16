@@ -12,19 +12,20 @@ public class IntervalST<Key extends Comparable<Key>, Value> extends BST {
         Key maximum;
         Value val;
         Node left, right;
-        int size;
+        int N;
 
-        public Node(Key low, Key high, Value value, int size) {
+        public Node(Key low, Key high, Value value,int N) {
             lo = low;
             hi = high;
             val = value;
-            this.size = size;
+            this.N=N;
         }
     }
 
     void delete(Key low, Key high) {
         delete(low);
     }
+
     void put(Key low, Key high, Value value) {
 // val is the max value
         if (low == null) throw new IllegalArgumentException("calls put(0 with a null key");
@@ -37,20 +38,24 @@ public class IntervalST<Key extends Comparable<Key>, Value> extends BST {
 
     private Node put(Node h, Key low, Key high, Value value) {
         if (h == null) {
-            Node n = new Node(low, high, value, 1);
+            Node n = new Node(low, high, value,1);
             n.maximum = high;
             return n;
         }
         int cmp = low.compareTo(h.lo);
         if (cmp < 0) {
-            h.left = put(h.left, low, high, value);
+             h.left = put(h.left, low, high, value);
+            //h.left = new Node(low, high, value);
+            h.left.maximum=high;
             h.maximum = (h.maximum.compareTo(high) > 0) ? h.maximum : high;
 
         } else if (cmp > 0) {
-            h.right = put(h.right, low, high, value);
+             h.right = put(h.right, low, high, value);
+            //h.right = new Node(low, high, value);
+            h.right.maximum=high;
             h.maximum = (h.maximum.compareTo(high) > 0) ? h.maximum : high;
         } else h.val = value;
-        h.size = 1 + size(h.left) + size(h.right);
+        h.N = 1 + size(h.left) + size(h.right);
         return h;
     }
 
@@ -65,7 +70,7 @@ public class IntervalST<Key extends Comparable<Key>, Value> extends BST {
 
     private int size(Node x) {
         if (x == null) return 0;
-        else return x.size;
+        else return x.N;
     }
 
     Iterable<Value> intersects(Key low, Key high) {
@@ -87,8 +92,8 @@ public class IntervalST<Key extends Comparable<Key>, Value> extends BST {
                 h.right = intersects(h.right, low, high);
                 return h.right;
             }
-            h.left=intersects(h.left, low, high);
-            h.right=intersects(h.right,low,high);
+            h.left = intersects(h.left, low, high);
+            h.right = intersects(h.right, low, high);
         }
         return h;
     }

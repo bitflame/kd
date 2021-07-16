@@ -19,8 +19,7 @@ public class KdTree {
     });
     private RectHV rHl = null;
     private RectHV rHr = null;
-    private double x;
-    private double y;
+
     private double xmin;
     private double ymin;
     private double xmax;
@@ -34,6 +33,8 @@ public class KdTree {
         int N; // # nodes in this subtree
         boolean orientation; // 0 means horizontal
         RectHV nodeRect;
+        double xCoord;
+        double yCoord;
         // maximum values in each tree
         double maximumX = 0.0;
         double maximumY = 0.0;
@@ -249,22 +250,22 @@ public class KdTree {
         with rect, then you do an sliding interval search for points that are between its minx,miny, maxx, & maxy */
         double lo = rect.ymin();
         double hi = rect.ymax();
+        intervalSearchTree.intersects(lo,hi);
         double currentX;
-        currentX = xCoordinates.delMin();
         while (!xCoordinates.isEmpty()) {
-
-            if (currentX >= h.minXInter) {
+            currentX = xCoordinates.delMin();
+            if (currentX >= lo) {
                 /* I did not see how this next line would work out until I wrote the code! Kept thinking how to get
                  * the y coordinate if I only had x's and vise versa ! wow */
-                intervalSearchTree.put(h.minYInter, h.maxXInter, currentX);
+                intervalSearchTree.put(h.minYInter, h.maxYInter, currentX);
                 for (Double d : intervalSearchTree.intersects(lo, hi)) {
                     /* d is the intersection interval, so I should check any potential area for union of points in the
                      * rectangles */
-                    Point2D start = new Point2D(currentX, lo );
+                    Point2D start = new Point2D(currentX, lo);
                     Point2D end = new Point2D(currentX, hi);
                     if (contains(start)) StdOut.println("found a point");
                     else if (contains(end)) StdOut.println("found a point");
-                    else if (floor(end)!=null) StdOut.println("Here is what is in floor: "+floor(end).p);
+                    else if (floor(end) != null) StdOut.println("Here is what is in floor: " + floor(end).p);
                 }
                 if (intervalSearchTree.intersects(lo, hi) != null) {
                     // do a range search for all the points something like for(Points p: Keys(currentx,lo)-(currentx,hi)
@@ -276,12 +277,65 @@ public class KdTree {
                     I just fixed the compile errors. I am not sure if they work the way they should */
                 }
 
-            } else if (currentX == h.maxXInter) {
+            } else if (currentX == hi) {
                 intervalSearchTree.delete(h.minYInter, h.maxXInter);
             }
             currentX = xCoordinates.delMin();
         }
         return points;
+    }
+
+    /* for tracking rectangle intervals
+            double minXInter = 0.0;
+            double maxXInter = 1.0;
+            double minYInter = 0.0;
+            double maxYInter = 1.0; */
+    private void setLeftRectIntervals(Node x) {
+
+        /* Use the values in the video for testing to make sure you get the same results. Also create your own
+         * tests with tailored values in all quadrants, and quadrants within and outside them  */
+        RectHV left;
+        if (!x.orientation) { // Horizontal node
+            // left = new RectHV(x.parent.minXInter, x.parent.minYInter, x.parent.p.x(), x.parent.maxYInter);
+// add the try statement here and if maximums are less than minimums, throw an error
+            x.minXInter = x.parent.minXInter;
+            x.minYInter = x.parent.minYInter;
+            x.maxXInter = x.xCoord;
+            x.maxYInter = x.parent.maxYInter;
+            intervalSearchTree.put(x.minYInter, x.maxYInter,x.xCoord);
+        } else {
+            // vertical node
+            // left = new RectHV(x.parent.minXInter, x.parent.minYInter, x.parent.maxXInter, x.parent.p.y());
+            // add the try statement here and if maximums are less than minimums, throw an error
+            x.minXInter = x.parent.minXInter;
+            x.minYInter = x.parent.minYInter;
+            x.maxXInter = x.parent.xCoord;
+            x.maxYInter = x.yCoord;
+            intervalSearchTree.put(x.minYInter, x.maxYInter,x.xCoord);
+        }
+    }
+
+    private void setRightRectIntervals(Node x) {
+        RectHV right;
+        if (!x.orientation) { //
+            // horizontal node
+            // right = new RectHV(x.parent.p.x(), x.parent.minYInter, x.parent.maxXInter, x.parent.maxYInter);
+            // add the try statement here and if maximums are less than minimums, throw an error
+            x.minXInter = x.xCoord;
+            x.minYInter = x.parent.minYInter;
+            x.maxXInter = x.parent.maxXInter;
+            x.maxYInter = x.parent.maxYInter;
+            intervalSearchTree.put(x.minYInter, x.maxYInter,x.xCoord);
+        } else {
+            // vertical node
+            // right = new RectHV(x.parent.minXInter, x.parent.p.y(), x.parent.maxXInter, x.parent.maxYInter);
+            // add the try statement here and if maximums are less than minimums, throw an error
+            x.minXInter = x.parent.minXInter;
+            x.minYInter = x.yCoord;
+            x.maxXInter = x.parent.maxXInter;
+            x.maxYInter = x.parent.maxYInter;
+            intervalSearchTree.put(x.minYInter, x.maxYInter,x.xCoord);
+        }
     }
 
     public void insert(Point2D p) {
@@ -290,59 +344,13 @@ public class KdTree {
         Node newNode = new Node(p, 1, false, null);
         newNode.maximumX = p.x();
         xCoordinates.insert(p.x());
+
         root = insert(root, newNode);
-    }
-
-    /* for tracking rectangle intervals
-        double minXInter = 0.0;
-        double maxXInter = 1.0;
-        double minYInter = 0.0;
-        double maxYInter = 1.0; */
-    private void setLeftRectIntervals(Node x) {
-
-        /* Use the values in the video for testing to make sure you get the same results. Also create your own
-         * tests with tailored values in all quadrants, and quadrants within and outside them  */
-        RectHV left;
-        if (!x.parent.orientation) {
-            // left = new RectHV(x.parent.minXInter, x.parent.minYInter, x.parent.p.x(), x.parent.maxYInter);
-// add the try statement here and if maximums are less than minimums, throw an error
-            x.minXInter = x.parent.minXInter;
-            x.minYInter = x.parent.minYInter;
-            x.maxXInter = x.parent.p.x();
-            x.maxYInter = x.parent.maxYInter;
-        } else {
-            // left = new RectHV(x.parent.minXInter, x.parent.minYInter, x.parent.maxXInter, x.parent.p.y());
-            // add the try statement here and if maximums are less than minimums, throw an error
-            x.minXInter = x.parent.minXInter;
-            x.minYInter = x.parent.minYInter;
-            x.maxXInter = x.parent.maxXInter;
-            x.maxYInter = x.parent.p.y();
-        }
-    }
-
-    private void setRightRectIntervals(Node x) {
-        RectHV right;
-        if (!x.parent.orientation) {
-            // horizontal node
-            // right = new RectHV(x.parent.p.x(), x.parent.minYInter, x.parent.maxXInter, x.parent.maxYInter);
-            // add the try statement here and if maximums are less than minimums, throw an error
-            x.minXInter = x.parent.p.x();
-            x.minYInter = x.parent.minYInter;
-            x.maxXInter = x.parent.maxXInter;
-            x.maxYInter = x.parent.maxYInter;
-        } else {
-            // vertical node
-            // right = new RectHV(x.parent.minXInter, x.parent.p.y(), x.parent.maxXInter, x.parent.maxYInter);
-            // add the try statement here and if maximums are less than minimums, throw an error
-            x.minXInter = x.parent.minXInter;
-            x.minYInter = x.parent.p.y();
-            x.maxXInter = x.parent.maxXInter;
-            x.maxYInter = x.parent.maxYInter;
-        }
     }
 
     private Node insert(Node h, Node newNode) {
         if (h == null) {
+            intervalSearchTree.put(0.0,1.0,1.0);
             return newNode;
         } else {
             newNode.orientation = !h.orientation;
@@ -376,14 +384,14 @@ public class KdTree {
             h.maximumY = Math.max(h.maximumY, h.right.maximumY);
         }
         h.N = leftN + rightN + 1;
-        if (h.right != null) {
-            h.maximumX = Math.max(h.maximumX, h.right.maximumX);
-            h.maximumY = Math.max(h.maximumY, h.right.maximumY);
-        }
-        if (h.left != null) {
-            h.maximumX = Math.max(h.maximumX, h.left.maximumX);
-            h.maximumY = Math.max(h.maximumY, h.left.maximumY);
-        }
+//        if (h.right != null) {
+//            h.maximumX = Math.max(h.maximumX, h.right.maximumX);
+//            h.maximumY = Math.max(h.maximumY, h.right.maximumY);
+//        }
+//        if (h.left != null) {
+//            h.maximumX = Math.max(h.maximumX, h.left.maximumX);
+//            h.maximumY = Math.max(h.maximumY, h.left.maximumY);
+//        }
         return h;
     }
 
@@ -537,7 +545,7 @@ public class KdTree {
             Point2D p = new Point2D(x, y);
             kdtree.insert(p);
         }
-        RectHV r = new RectHV(0.48, 0.28, 0.50, 0.31);
+        RectHV r = new RectHV(0.6, 0.20, 0.8, 0.9);
         StdOut.println("Here are the points in the above rectangle: ");
         kdtree.range(r);
 //        for (Point2D p : kdtree.range(r)) {

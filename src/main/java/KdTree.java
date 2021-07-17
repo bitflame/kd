@@ -18,13 +18,7 @@ public class KdTree {
             return 0;
         }
     });
-    private RectHV rHl = null;
-    private RectHV rHr = null;
 
-    private double xmin;
-    private double ymin;
-    private double xmax;
-    private double ymax;
     private MinPQ<Double> xCoordinates = new MinPQ<>();
     IntervalST<Double, Double> intervalSearchTree = new IntervalST();
 
@@ -75,16 +69,6 @@ public class KdTree {
             }
             return 1;
         }
-
-        /*Here is the code for intersects
-        public boolean intersects(RectHV that) {
-            return this.xmax >= that.xmin && this.ymax >= that.ymin
-                    && that.xmax >= this.xmin && that.ymax >= this.ymin;
-        }
-        private boolean intersects(double lo, double hi) {
-            if (this.maxYInter >= lo && hi >= this.minYInter) return true;
-            return false;
-        }*/
     }
 
     public void draw() {
@@ -178,7 +162,7 @@ public class KdTree {
         if (cmphi > 0) keys(x.right, queue, lo, hi);
     }
 
-    public Node select(int k) {
+    private Node select(int k) {
         return select(root, k);
     }
 
@@ -190,7 +174,7 @@ public class KdTree {
         else return x;
     }
 
-    public int rank(Node lo) {
+    private int rank(Node lo) {
         return rank(lo, root);
     }
 
@@ -206,7 +190,7 @@ public class KdTree {
         return get(p) != null;
     }
 
-    public Node floor(Point2D p) {
+    private Node floor(Point2D p) {
         return floor(root, p);
     }
 
@@ -219,38 +203,6 @@ public class KdTree {
         if (t != null) return t;
         else return x;
     }
-
-    private Node getIntersectingSegments(RectHV rect) {
-        /* Get x from xCoordinates and see if it intersects with rect's lo and hi. lo=rect.miny() and hi= rect.maxy()
-         * Also; instead of returning x, collect all of the intersecting nodes in an array list or something in case
-         * there is more than one, and check them out. If */
-        /*Here is the code for intersects
-        public boolean intersects(RectHV that) {
-            return this.xmax >= that.xmin && this.ymax >= that.ymin
-                    && that.xmax >= this.xmin && that.ymax >= this.ymin;
-        }*/
-
-        double lo = rect.ymin();
-        double hi = rect.ymax();
-        Node x = null;
-        while (!nodesPriorityQueue.isEmpty()) {
-            x = nodesPriorityQueue.delMin();
-
-            /* add the y interval of the node's rectangle to a bst and check to see if there are any intersections
-            in the bst */
-            if ((x.maxXInter <= hi && x.maxXInter > lo) || (x.minXInter > lo && x.minXInter < hi)) {
-                // if x interval intersects the query interval
-                StdOut.println("If you see this statement more than once, you are matching more than one node. " +
-                        "change the code to collect all of them in an array list or something so you can do a range " +
-                        "search / recursive lookup of the points you find here.");
-                return x;
-            } else if (x.left == null) x = x.right;
-            else if (x.left.maximumX < lo) x = x.right;
-            else x = x.left;
-        }
-        return null;
-    }
-
     public Iterable<Point2D> range(RectHV rect) {
 
         if (rect == null) throw new IllegalArgumentException("rectangle has to be a valid " +
@@ -259,13 +211,11 @@ public class KdTree {
         return points;
     }
 
-
     private Iterable<Point2D> range(Node h, RectHV rect) {
         /* Maybe interval search refers to the rectangle's interval i.e. first you find all the rectangles that intersect
         with rect, then you do an sliding interval search for points that are between its minx,miny, maxx, & maxy */
         double lo = rect.ymin();
         double hi = rect.ymax();
-        intervalSearchTree.intersects(lo, hi);
         double currentX;
         while (!xCoordinates.isEmpty()) {
             currentX = xCoordinates.delMin();
@@ -274,22 +224,11 @@ public class KdTree {
                  * the y coordinate if I only had x's and vise versa ! wow */
                 intervalSearchTree.put(h.minYInter, h.maxYInter, currentX);
                 for (Double d : intervalSearchTree.intersects(lo, hi)) {
-                    /* I think the points between floor(end) and ceiling(start) will give me the answer to range() for
-                     * the rect */
-                    // StdOut.println("There is an intersection at: " + currentX + " with interval size of: " + d);
                     Point2D start = new Point2D(currentX, lo);
                     Point2D end = new Point2D(currentX, hi);
                     for (Point2D p: keys(start, end)){
-                        if (!points.contains(p)) points.add(p);
+                        if ((!points.contains(p)) && rect.contains(p)) points.add(p);
                     }
-                }
-                if (intervalSearchTree.intersects(lo, hi) != null) {
-                    // do a range search for all the points something like for(Points p: Keys(currentx,lo)-(currentx,hi)
-                    /* I may be able to get the rank() for the points (currentX,lo) and (currentX,hi) and then say
-                    select() the nodes above the rank((currentX,lo)) and below the rank((currentX,hi)). I may still
-                    have to check to see if rect contains them. At least the first time I test, to make sure this
-                    method works, and then remove the test. I also have to test the rank() and select methods of KdTree
-                    I just fixed the compile errors. I am not sure if they work the way they should */
                 }
             } else if (currentX >= hi) {
                 intervalSearchTree.delete(h.minYInter, h.maxXInter);
@@ -298,19 +237,11 @@ public class KdTree {
         return points;
     }
 
-    /* for tracking rectangle intervals
-            double minXInter = 0.0;
-            double maxXInter = 1.0;
-            double minYInter = 0.0;
-            double maxYInter = 1.0; */
     private void setLeftRectIntervals(Node x) {
 
-        /* Use the values in the video for testing to make sure you get the same results. Also create your own
-         * tests with tailored values in all quadrants, and quadrants within and outside them  */
         RectHV left;
         if (!x.orientation) { // Horizontal node
             // left = new RectHV(x.parent.minXInter, x.parent.minYInter, x.parent.p.x(), x.parent.maxYInter);
-// add the try statement here and if maximums are less than minimums, throw an error
             x.minXInter = x.parent.minXInter;
             x.minYInter = x.parent.minYInter;
             x.maxXInter = x.xCoord;
@@ -319,7 +250,6 @@ public class KdTree {
         } else {
             // vertical node
             // left = new RectHV(x.parent.minXInter, x.parent.minYInter, x.parent.maxXInter, x.parent.p.y());
-            // add the try statement here and if maximums are less than minimums, throw an error
             x.minXInter = x.parent.minXInter;
             x.minYInter = x.parent.minYInter;
             x.maxXInter = x.parent.xCoord;
@@ -333,7 +263,6 @@ public class KdTree {
         if (!x.orientation) { //
             // horizontal node
             // right = new RectHV(x.parent.p.x(), x.parent.minYInter, x.parent.maxXInter, x.parent.maxYInter);
-            // add the try statement here and if maximums are less than minimums, throw an error
             x.minXInter = x.xCoord;
             x.minYInter = x.parent.minYInter;
             x.maxXInter = x.parent.maxXInter;
@@ -342,7 +271,6 @@ public class KdTree {
         } else {
             // vertical node
             // right = new RectHV(x.parent.minXInter, x.parent.p.y(), x.parent.maxXInter, x.parent.maxYInter);
-            // add the try statement here and if maximums are less than minimums, throw an error
             x.minXInter = x.parent.minXInter;
             x.minYInter = x.yCoord;
             x.maxXInter = x.parent.maxXInter;
@@ -400,14 +328,6 @@ public class KdTree {
             h.maximumY = Math.max(h.maximumY, h.right.maximumY);
         }
         h.N = leftN + rightN + 1;
-//        if (h.right != null) {
-//            h.maximumX = Math.max(h.maximumX, h.right.maximumX);
-//            h.maximumY = Math.max(h.maximumY, h.right.maximumY);
-//        }
-//        if (h.left != null) {
-//            h.maximumX = Math.max(h.maximumX, h.left.maximumX);
-//            h.maximumY = Math.max(h.maximumY, h.left.maximumY);
-//        }
         return h;
     }
 
@@ -495,39 +415,6 @@ public class KdTree {
         return nearstP;
     }
 
-    private void testRectangles() {
-        Point2D p1 = new Point2D(0.5, 0.5);
-        Node n1 = new Node(p1, 1, false, null);
-        root = n1;
-        n1.xCoord = p1.x();
-        n1.yCoord = p1.y();
-        n1.nodeRect = new RectHV(0.0, 0.0, 1.0, 1.0);
-        intervalSearchTree.put(n1.minYInter, n1.maxYInter, n1.xCoord);
-        StdOut.println(intervalSearchTree.size());
-        /*node 2*/
-        Point2D p2 = new Point2D(0.2, 0.2);
-        Node n2 = new Node(p2, 2, true, n1);
-        root.left = n2;
-        n2.xCoord = p2.x();
-        n2.yCoord = p2.y();
-        setLeftRectIntervals(n2);
-        /* I call intervalSearchTree.put() inside the setLeftRectIntervals() also that is why the size does not match */
-        setRightRectIntervals(n2);
-        // intervalSearchTree.put(n2.minYInter,n2.maxYInter,n2.xCoord);
-        StdOut.println(intervalSearchTree.size());
-        /*node 3*/
-        Point2D p3 = new Point2D(0.1, 0.1);
-        Node n3 = new Node(p3, 3, false, n2);
-        n2.left = n3;
-        n3.xCoord = p3.x();
-        n3.yCoord = p3.y();
-        setLeftRectIntervals(n2);
-        setRightRectIntervals(n2);
-        // intervalSearchTree.put(n3.minYInter,n3.maxYInter,n3.xCoord);
-        StdOut.println(intervalSearchTree.size());
-        StdOut.println("working?    ");
-    }
-
     private int height(Node root) {
         if (root == null)
             return 0;
@@ -597,7 +484,7 @@ public class KdTree {
             Point2D p = new Point2D(x, y);
             kdtree.insert(p);
         }
-        RectHV r = new RectHV(0.5, 0.40, 0.6, 0.6);
+        RectHV r = new RectHV(0.0, 0.48, 0.02, 0.52);
 
 //        for (Point2D p : kdtree.range(r)) {
 //            StdOut.println(" : " + p);

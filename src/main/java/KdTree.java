@@ -1,4 +1,5 @@
 
+import com.sun.jdi.Value;
 import edu.princeton.cs.algs4.*;
 
 import java.util.ArrayList;
@@ -158,7 +159,7 @@ public class KdTree {
         int cmplo = lo.compareTo(x.p);
         int cmphi = hi.compareTo(x.p);
         if (cmplo < 0) keys(x.left, queue, lo, hi);
-        if (cmplo <= 0 && cmphi >=0) queue.enqueue(x.p);
+        if (cmplo <= 0 && cmphi >= 0) queue.enqueue(x.p);
         if (cmphi > 0) keys(x.right, queue, lo, hi);
     }
 
@@ -203,6 +204,7 @@ public class KdTree {
         if (t != null) return t;
         else return x;
     }
+
     public Iterable<Point2D> range(RectHV rect) {
 
         if (rect == null) throw new IllegalArgumentException("rectangle has to be a valid " +
@@ -226,7 +228,7 @@ public class KdTree {
                 for (Double d : intervalSearchTree.intersects(lo, hi)) {
                     Point2D start = new Point2D(currentX, lo);
                     Point2D end = new Point2D(currentX, hi);
-                    for (Point2D p: keys(start, end)){
+                    for (Point2D p : keys(start, end)) {
                         if ((!points.contains(p)) && rect.contains(p)) points.add(p);
                     }
                 }
@@ -469,6 +471,19 @@ public class KdTree {
         }
     }
 
+    private Iterable<Point2D> KDintersects(double lo, double hi) {
+        double currentX;
+        while (!xCoordinates.isEmpty()) {
+            currentX = xCoordinates.delMin();
+            // Get me all the points with this x coordinate and y between lo and hi
+            Point2D start = new Point2D(currentX, lo);
+            Point2D end = new Point2D(currentX, hi);
+            for (Point2D p : keys(start, end)) {
+                if (!points.contains(p)) points.add(p);
+            }
+        }
+        return points;
+    }
 
     public static void main(String[] args) {
         /* Test all the files to see if they load ok, and seem to produce the right rectangles and etc. */
@@ -498,11 +513,15 @@ public class KdTree {
 //        RectHV r = new RectHV(0.1, 0.1, 0.8, 0.6);
 //        StdOut.println("Rectangle: " + r + "Contains points: " + kdtree.range(r));
         //StdOut.println("Here are the points in the above rectangle: ");
-        kdtree.range(r);
+//        kdtree.range(r);
         StdOut.println("Here are the points in the rectangle: ");
-        for (Point2D p: kdtree.points){
+//        for (Point2D p : kdtree.points) {
+//            StdOut.println(p);
+//        }
+        for (Point2D p : kdtree.KDintersects(r.ymin(), r.ymax())) {
             StdOut.println(p);
         }
+
 //        PointSET brute = new PointSET();
 //
 //        int counter = 0;
